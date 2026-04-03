@@ -1,0 +1,19 @@
+services:
+  api:
+    build: ./backend-go
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - DATABASE_PATH=/data/alaya-archive.db
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-me}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-}
+    volumes:
+      - db-data:/data
+    restart: unless-stopped
+
+volumes:
+  db-data:

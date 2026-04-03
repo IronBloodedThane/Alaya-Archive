@@ -1,0 +1,62 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build and push API image
+        run: |
+          IMAGE=${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/alaya-archive/api:${{ github.sha }}
+          docker build -t $IMAGE ./backend-go
+          docker push $IMAGE
+
+      - name: Deploy API to Cloud Run
+        run: |
+          gcloud run deploy alaya-archive-api \
+            --image ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/alaya-archive/api:${{ github.sha }} \
+            --region ${{ secrets.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --min-instances 0 \
+            --max-instances 2 \
+            --set-env-vars "DATABASE_PATH=/data/alaya-archive.db" \
+            --set-env-vars "SECRET_KEY=${{ secrets.SECRET_KEY }}" \
+            --set-env-vars "CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}" \
+            --set-env-vars "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" \
+            --set-env-vars "SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}" \
+            --set-env-vars "SENDGRID_FROM_EMAIL=${{ secrets.SENDGRID_FROM_EMAIL }}"
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy frontend to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.GCP_SA_KEY }}
+          channelId: live
+          entryPoint: frontend

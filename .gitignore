@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build
+frontend/dist/
+backend-go/api
+
+# Database
+*.db
+data/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Firebase
+.firebase/
