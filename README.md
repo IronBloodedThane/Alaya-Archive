@@ -180,85 +180,61 @@ Migrations are embedded in Go code and run automatically on startup. To add a ne
 
 ## Production Deployment (Google Cloud)
 
-Cloud Run provides scale-to-zero hosting — **$0 when idle**.
+Frontend is served by Firebase Hosting; the API runs on Cloud Run with scale-to-zero. The SQLite database file lives in a GCS bucket mounted into the Cloud Run container as a FUSE volume, which means state survives restarts without a separate database service.
 
-### GCP Setup
+### Architecture
 
-1. **Create a GCP project** and enable required APIs:
+- **Firebase Hosting** serves the built frontend and rewrites `/api/**` to the Cloud Run service, so the browser only ever talks to the Firebase origin (no CORS headaches).
+- **Cloud Run** runs the Go API as a gen2 service, pinned to `--max-instances=1` (SQLite is single-writer — multiple instances would corrupt the DB).
+- **GCS bucket** (`alaya-archive-prod-db`) is mounted at `/data` via Cloud Run's Cloud Storage volume support. `DATABASE_PATH=/data/alaya-archive.db`.
+- **Journal mode**: `DB_JOURNAL_MODE=DELETE` in production (GCS FUSE has no POSIX file locks, so WAL is unsafe). Local dev still defaults to WAL.
+- **Artifact Registry** holds the Docker images.
 
-   ```bash
-   gcloud services enable run.googleapis.com artifactregistry.googleapis.com
-   ```
+### One-time GCP setup
 
-2. **Create an Artifact Registry repository**:
+The setup commands are documented in this repo's git history under the "Setup GCP deployment" conversation — the short version:
 
-   ```bash
-   gcloud artifacts repositories create alaya-archive \
-     --repository-format=docker \
-     --location=us-central1
-   ```
+1. Create the project, enable `run`, `artifactregistry`, `iam`, `cloudbuild`, and `storage` APIs, set region.
+2. Create Artifact Registry repo `alaya-archive` in `us-central1`.
+3. Create the DB bucket with uniform bucket-level access.
+4. Create two service accounts:
+   - `ci-deployer@$PROJECT.iam.gserviceaccount.com` — used by GitHub Actions. Needs `roles/run.admin`, `roles/artifactregistry.writer`, `roles/iam.serviceAccountUser`, `roles/firebasehosting.admin`.
+   - `api-runtime@$PROJECT.iam.gserviceaccount.com` — used by the Cloud Run service at runtime. Needs `roles/storage.objectAdmin` **scoped to the DB bucket** (not project-wide).
+5. Download a JSON key for `ci-deployer` and add it as the `GCP_SA_KEY` GitHub secret.
+6. Link Firebase to the GCP project (`firebase projects:addfirebase $PROJECT`), then `firebase use --add` inside `frontend/` with alias `default`.
 
-3. **Create a service account** for GitHub Actions deployment:
+### GitHub secrets
 
-   ```bash
-   gcloud iam service-accounts create github-deploy
-   # Grant necessary roles
-   gcloud projects add-iam-policy-binding $PROJECT_ID \
-     --member="serviceAccount:github-deploy@$PROJECT_ID.iam.gserviceaccount.com" \
-     --role="roles/run.admin"
-   gcloud projects add-iam-policy-binding $PROJECT_ID \
-     --member="serviceAccount:github-deploy@$PROJECT_ID.iam.gserviceaccount.com" \
-     --role="roles/artifactregistry.writer"
-   gcloud projects add-iam-policy-binding $PROJECT_ID \
-     --member="serviceAccount:github-deploy@$PROJECT_ID.iam.gserviceaccount.com" \
-     --role="roles/iam.serviceAccountUser"
-   ```
+Add these in **Settings → Secrets and variables → Actions**:
 
-4. **Export a service account key** and add it as a GitHub secret:
-
-   ```bash
-   gcloud iam service-accounts keys create key.json \
-     --iam-account=github-deploy@$PROJECT_ID.iam.gserviceaccount.com
-   # Add contents of key.json as GCP_SA_KEY secret in GitHub
-   ```
-
-### Firebase Hosting Setup
-
-1. Install Firebase CLI: `npm install -g firebase-tools`
-2. Login: `firebase login`
-3. Initialize in the `frontend/` directory: `firebase init hosting`
-4. Select the GCP project created above
-5. Set `dist` as the public directory
-
-### SQLite Persistence on Cloud Run
-
-Cloud Run instances are ephemeral — the SQLite database needs external persistence. Recommended approach: **Litestream** replicating to Google Cloud Storage.
-
-Setup instructions TBD.
-
-### GitHub Secrets
-
-Add these secrets in **Settings > Secrets and variables > Actions**:
-
-| Secret | Description |
-|--------|-------------|
-| `GCP_PROJECT_ID` | Your GCP project ID |
-| `GCP_REGION` | Deployment region (e.g., `us-central1`) |
-| `GCP_SA_KEY` | Service account key JSON |
-| `SECRET_KEY` | JWT signing key — generate with `openssl rand -base64 32` |
-| `CORS_ORIGINS` | Allowed origins (e.g., `https://alaya-archive.web.app`) |
-| `FRONTEND_URL` | Frontend URL for email links |
-| `SENDGRID_API_KEY` | SendGrid API key (for email verification/reset) |
-| `SENDGRID_FROM_EMAIL` | Sender email address |
+| Secret | Value / Example |
+|--------|-----------------|
+| `GCP_SA_KEY` | Full JSON contents of the `ci-deployer` key file |
+| `GCP_PROJECT_ID` | `alaya-archive-prod` |
+| `GCP_REGION` | `us-central1` |
+| `DB_BUCKET` | `alaya-archive-prod-db` |
+| `SECRET_KEY` | Output of `openssl rand -base64 48` |
+| `CORS_ORIGINS` | `https://alaya-archive-prod.web.app` |
+| `FRONTEND_URL` | `https://alaya-archive-prod.web.app` |
+| `SENDGRID_API_KEY` | `disabled` until email is wired up |
+| `SENDGRID_FROM_EMAIL` | Placeholder until email is wired up |
 
 ### Deploying
 
-Deployment is fully automated. Push to `main` and GitHub Actions will:
+Fully automated. Pushes to `main` trigger `.github/workflows/deploy.yml`, which:
 
-1. Run CI tests and lint
-2. Build and push the API Docker image to Artifact Registry
-3. Deploy the API to Cloud Run
-4. Build the frontend and deploy to Firebase Hosting
+1. Builds the API Docker image and pushes it to Artifact Registry (tagged with the commit SHA).
+2. Deploys to Cloud Run with the GCS volume mount, `api-runtime` SA, gen2 execution environment, and all env vars from secrets.
+3. Builds the frontend and deploys to Firebase Hosting.
+
+After a successful deploy, the app is live at `https://<project-id>.web.app`.
+
+### Operational notes
+
+- **Never increase `--max-instances` above 1** for Cloud Run while SQLite remains the database. Concurrent writers on GCS FUSE will corrupt the file.
+- **Backups**: GCS bucket versioning is worth enabling — accidental deletes of the DB file are otherwise unrecoverable.
+- **Cold starts**: first request after idle pays the Cloud Run cold start + GCS FUSE mount time (a few seconds). Acceptable for a personal catalog; consider `--min-instances=1` if that becomes annoying (costs ~$5/mo).
+- **Migrations**: run automatically on startup; there's no separate deploy step.
 
 ## Environment Variables
 
@@ -266,6 +242,7 @@ Deployment is fully automated. Push to `main` and GitHub Actions will:
 |----------|---------|-------------|
 | `PORT` | `8080` | API server port |
 | `DATABASE_PATH` | `./data/alaya-archive.db` | Path to SQLite database file |
+| `DB_JOURNAL_MODE` | `WAL` | SQLite journal mode (set to `DELETE` on GCS FUSE) |
 | `SECRET_KEY` | `change-me-in-production` | JWT signing key — **change in production** |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed origins |
 | `FRONTEND_URL` | `http://localhost:5173` | Frontend URL for email links |

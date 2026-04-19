@@ -14,7 +14,12 @@ func Open(path string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("sqlite", path+"?_journal_mode=WAL&_busy_timeout=5000&_foreign_keys=ON")
+	journalMode := os.Getenv("DB_JOURNAL_MODE")
+	if journalMode == "" {
+		journalMode = "WAL"
+	}
+
+	db, err := sql.Open("sqlite", path+"?_journal_mode="+journalMode+"&_busy_timeout=5000&_foreign_keys=ON")
 	if err != nil {
 		return nil, err
 	}

@@ -10,3 +10,9 @@ export const changePassword = (current_password, new_password) => client.post('/
 export const deleteAccount = (confirmation) => client.post('/auth/delete-account', { confirmation }).then((r) => r.data)
 export const getCurrentUser = () => client.get('/users/me').then((r) => r.data)
 export const updateProfile = (data) => client.patch('/users/me', data).then((r) => r.data)
+export const uploadAvatar = (file) => {
+  const fd = new FormData()
+  fd.append('avatar', file)
+  return client.post('/users/me/avatar', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data)
+}
+export const deleteAvatar = () => client.delete('/users/me/avatar').then((r) => r.data)

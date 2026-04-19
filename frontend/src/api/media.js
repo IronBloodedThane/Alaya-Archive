@@ -9,3 +9,5 @@ export const rateMedia = (id, rating) => client.post(`/media/${id}/rating`, { ra
 export const setTags = (id, tags) => client.post(`/media/${id}/tags`, { tags }).then((r) => r.data)
 export const getStats = () => client.get('/media/stats').then((r) => r.data)
 export const searchMedia = (q, params) => client.get('/media/search', { params: { q, ...params } }).then((r) => r.data)
+export const getPublicProfile = (username) => client.get(`/users/${encodeURIComponent(username)}`).then((r) => r.data)
+export const getPublicCollection = (username, params) => client.get(`/users/${encodeURIComponent(username)}/collection`, { params }).then((r) => r.data)

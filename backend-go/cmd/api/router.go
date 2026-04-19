@@ -26,7 +26,7 @@ func NewRouter(db *sql.DB, cfg *config.Config) *chi.Mux {
 
 	authHandler := handler.NewAuthHandler(userRepo, cfg)
 	userHandler := handler.NewUserHandler(userRepo, cfg)
-	mediaHandler := handler.NewMediaHandler(mediaRepo, cfg)
+	mediaHandler := handler.NewMediaHandler(mediaRepo, userRepo, cfg)
 	socialHandler := handler.NewSocialHandler(socialRepo, userRepo, cfg)
 
 	r.Route("/api/v1", func(r chi.Router) {
@@ -87,6 +87,9 @@ func NewRouter(db *sql.DB, cfg *config.Config) *chi.Mux {
 				r.Delete("/{friendID}", socialHandler.RemoveFriend)
 			})
 		})
+
+		// Public avatar — no auth needed so <img> tags can load it
+		r.Get("/users/{username}/avatar", userHandler.GetAvatar)
 
 		// Public profile (optional auth for follow status)
 		r.Group(func(r chi.Router) {

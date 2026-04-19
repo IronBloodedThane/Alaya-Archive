@@ -58,7 +58,7 @@ func (r *SocialRepository) Unfollow(followerID, followingID string) error {
 
 func (r *SocialRepository) GetFollowers(userID string) ([]*User, error) {
 	rows, err := r.db.Query(
-		`SELECT u.id, u.email, u.username, '', u.display_name, u.bio, u.avatar, u.email_verified, u.profile_public, u.created_at, u.updated_at
+		`SELECT u.id, u.email, u.username, '', u.display_name, u.bio, u.avatar_data IS NOT NULL, u.email_verified, u.profile_public, u.created_at, u.updated_at
 		 FROM users u JOIN follows f ON u.id = f.follower_id WHERE f.following_id = ?`, userID,
 	)
 	if err != nil {
@@ -70,7 +70,7 @@ func (r *SocialRepository) GetFollowers(userID string) ([]*User, error) {
 
 func (r *SocialRepository) GetFollowing(userID string) ([]*User, error) {
 	rows, err := r.db.Query(
-		`SELECT u.id, u.email, u.username, '', u.display_name, u.bio, u.avatar, u.email_verified, u.profile_public, u.created_at, u.updated_at
+		`SELECT u.id, u.email, u.username, '', u.display_name, u.bio, u.avatar_data IS NOT NULL, u.email_verified, u.profile_public, u.created_at, u.updated_at
 		 FROM users u JOIN follows f ON u.id = f.following_id WHERE f.follower_id = ?`, userID,
 	)
 	if err != nil {
@@ -142,7 +142,7 @@ func (r *SocialRepository) RejectFriendRequest(requestID string) error {
 
 func (r *SocialRepository) GetFriends(userID string) ([]*User, error) {
 	rows, err := r.db.Query(
-		`SELECT u.id, u.email, u.username, '', u.display_name, u.bio, u.avatar, u.email_verified, u.profile_public, u.created_at, u.updated_at
+		`SELECT u.id, u.email, u.username, '', u.display_name, u.bio, u.avatar_data IS NOT NULL, u.email_verified, u.profile_public, u.created_at, u.updated_at
 		 FROM users u JOIN friends f ON u.id = f.friend_id WHERE f.user_id = ?`, userID,
 	)
 	if err != nil {
@@ -241,7 +241,7 @@ func scanUsers(rows *sql.Rows) ([]*User, error) {
 	var users []*User
 	for rows.Next() {
 		u := &User{}
-		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.HashedPassword, &u.DisplayName, &u.Bio, &u.Avatar, &u.EmailVerified, &u.ProfilePublic, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.HashedPassword, &u.DisplayName, &u.Bio, &u.HasAvatar, &u.EmailVerified, &u.ProfilePublic, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, err
 		}
 		u.HashedPassword = ""

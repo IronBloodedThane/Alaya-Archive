@@ -1,5 +1,7 @@
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getFriends, getFriendRequests, acceptFriendRequest, rejectFriendRequest, removeFriend } from '../api/social'
+import Avatar from '../components/Avatar'
 
 export default function Friends() {
   const queryClient = useQueryClient()
@@ -35,10 +37,13 @@ export default function Friends() {
           <div className="space-y-2">
             {requests.map((req) => (
               <div key={req.id} className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                <div>
-                  <p className="font-medium dark:text-white">{req.from_display_name || req.from_username}</p>
-                  <p className="text-sm text-slate-500">@{req.from_username}</p>
-                </div>
+                <Link to={`/user/${req.from_username}`} className="flex items-center gap-3 min-w-0">
+                  <Avatar username={req.from_username} displayName={req.from_display_name} size="md" />
+                  <div className="min-w-0">
+                    <p className="font-medium dark:text-white truncate">{req.from_display_name || req.from_username}</p>
+                    <p className="text-sm text-slate-500 truncate">@{req.from_username}</p>
+                  </div>
+                </Link>
                 <div className="flex gap-2">
                   <button
                     onClick={() => acceptMutation.mutate(req.id)}
@@ -69,10 +74,13 @@ export default function Friends() {
         <div className="space-y-2">
           {friends.map((friend) => (
             <div key={friend.id} className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-              <div>
-                <p className="font-medium dark:text-white">{friend.display_name || friend.username}</p>
-                <p className="text-sm text-slate-500">@{friend.username}</p>
-              </div>
+              <Link to={`/user/${friend.username}`} className="flex items-center gap-3 min-w-0">
+                <Avatar username={friend.username} displayName={friend.display_name} size="md" version={friend.updated_at} />
+                <div className="min-w-0">
+                  <p className="font-medium dark:text-white truncate">{friend.display_name || friend.username}</p>
+                  <p className="text-sm text-slate-500 truncate">@{friend.username}</p>
+                </div>
+              </Link>
               <button
                 onClick={() => {
                   if (window.confirm(`Remove ${friend.username} as a friend?`)) {

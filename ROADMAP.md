@@ -17,7 +17,7 @@
 Get the existing features solid before adding new ones.
 
 - [ ] Fix email sending (SendGrid integration for verification & password reset)
-- [ ] Implement public collections endpoint
+- [x] Implement public collections endpoint
 - [ ] Bug fixes and UI polish
 - [ ] Mobile PWA testing and fixes
 - [ ] Verify CI/CD pipeline deploys correctly end-to-end

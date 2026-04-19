@@ -39,8 +39,13 @@ jobs:
             --allow-unauthenticated \
             --port 8080 \
             --min-instances 0 \
-            --max-instances 2 \
+            --max-instances 1 \
+            --service-account "api-runtime@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
+            --execution-environment gen2 \
+            --add-volume "name=db,type=cloud-storage,bucket=${{ secrets.DB_BUCKET }}" \
+            --add-volume-mount "volume=db,mount-path=/data" \
             --set-env-vars "DATABASE_PATH=/data/alaya-archive.db" \
+            --set-env-vars "DB_JOURNAL_MODE=DELETE" \
             --set-env-vars "SECRET_KEY=${{ secrets.SECRET_KEY }}" \
             --set-env-vars "CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}" \
             --set-env-vars "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" \

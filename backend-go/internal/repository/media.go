@@ -119,17 +119,21 @@ func (r *MediaRepository) List(userID string, filter MediaFilter) ([]*Media, int
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
 
 	var items []*Media
 	for rows.Next() {
 		m := &Media{}
 		if err := rows.Scan(&m.ID, &m.UserID, &m.MediaType, &m.Title, &m.TitleOriginal, &m.Description, &m.CoverImage, &m.Status, &m.Rating, &m.Notes, &m.YearReleased, &m.Creator, &m.Genre, &m.VolumesTotal, &m.VolumesOwned, &m.EpisodesTotal, &m.EpisodesWatched, &m.ChaptersTotal, &m.ChaptersRead, &m.IsPublic, &m.CreatedAt, &m.UpdatedAt); err != nil {
+			rows.Close()
 			return nil, 0, err
 		}
+		items = append(items, m)
+	}
+	rows.Close()
+
+	for _, m := range items {
 		tags, _ := r.GetTags(m.ID)
 		m.Tags = tags
-		items = append(items, m)
 	}
 
 	return items, total, nil

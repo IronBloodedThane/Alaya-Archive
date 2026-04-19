@@ -146,6 +146,15 @@ var migrations = []migration{
 		CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 		`,
 	},
+	{
+		version: 7,
+		name:    "avatar_blob",
+		sql: `
+		ALTER TABLE users DROP COLUMN avatar;
+		ALTER TABLE users ADD COLUMN avatar_data BLOB;
+		ALTER TABLE users ADD COLUMN avatar_mime TEXT DEFAULT '';
+		`,
+	},
 }
 
 func Migrate(db *sql.DB) error {

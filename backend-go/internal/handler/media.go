@@ -14,11 +14,12 @@ import (
 
 type MediaHandler struct {
 	media *repository.MediaRepository
+	users *repository.UserRepository
 	cfg   *config.Config
 }
 
-func NewMediaHandler(media *repository.MediaRepository, cfg *config.Config) *MediaHandler {
-	return &MediaHandler{media: media, cfg: cfg}
+func NewMediaHandler(media *repository.MediaRepository, users *repository.UserRepository, cfg *config.Config) *MediaHandler {
+	return &MediaHandler{media: media, users: users, cfg: cfg}
 }
 
 type createMediaRequest struct {
@@ -360,10 +361,38 @@ func (h *MediaHandler) SearchMedia(w http.ResponseWriter, r *http.Request) {
 func (h *MediaHandler) GetPublicCollection(w http.ResponseWriter, r *http.Request) {
 	username := chi.URLParam(r, "username")
 
-	// We need user repo access here - for now use a simple approach
-	// This would typically be injected as a dependency
-	writeError(w, http.StatusNotImplemented, "public collection endpoint - requires user lookup by username")
-	_ = username
+	user, err := h.users.GetByUsername(username)
+	if err != nil || !user.ProfilePublic {
+		writeError(w, http.StatusNotFound, "user not found")
+		return
+	}
+
+	filter := repository.MediaFilter{
+		MediaType: r.URL.Query().Get("type"),
+		Limit:     queryInt(r, "limit", 50),
+		Offset:    queryInt(r, "offset", 0),
+	}
+
+	items, total, err := h.media.ListPublicByUser(user.ID, filter)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load collection")
+		return
+	}
+
+	if items == nil {
+		items = []*repository.Media{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"items": items,
+		"total": total,
+		"user": map[string]interface{}{
+			"username":     user.Username,
+			"display_name": user.DisplayName,
+			"bio":          user.Bio,
+			"has_avatar":   user.HasAvatar,
+		},
+	})
 }
 
 func queryInt(r *http.Request, key string, fallback int) int {

@@ -184,6 +184,10 @@ func (h *SocialHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if friends == nil {
+		friends = []*repository.User{}
+	}
+
 	writeJSON(w, http.StatusOK, friends)
 }
 
@@ -194,6 +198,10 @@ func (h *SocialHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to get friend requests")
 		return
+	}
+
+	if requests == nil {
+		requests = []*repository.FriendRequest{}
 	}
 
 	writeJSON(w, http.StatusOK, requests)
