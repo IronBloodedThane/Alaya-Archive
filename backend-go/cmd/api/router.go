@@ -25,7 +25,7 @@ func NewRouter(db *sql.DB, cfg *config.Config) *chi.Mux {
 	mediaRepo := repository.NewMediaRepository(db)
 	socialRepo := repository.NewSocialRepository(db)
 
-	mailer := email.NewMailer(cfg.SendGridAPIKey, cfg.SendGridFromEmail)
+	mailer := email.NewMailer(cfg.EmailAPIKey, cfg.EmailFrom)
 
 	authHandler := handler.NewAuthHandler(userRepo, mailer, cfg)
 	userHandler := handler.NewUserHandler(userRepo, cfg)

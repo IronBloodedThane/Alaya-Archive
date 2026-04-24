@@ -11,64 +11,59 @@ import (
 )
 
 type Mailer struct {
-	apiKey    string
-	fromEmail string
-	fromName  string
-	client    *http.Client
+	apiKey string
+	from   string
+	client *http.Client
 }
 
-func NewMailer(apiKey, fromEmail string) *Mailer {
+// NewMailer creates a Resend-backed mailer. `from` may be a bare address
+// (`noreply@example.com`) or a name-and-address pair (`Alaya Archive <noreply@example.com>`).
+func NewMailer(apiKey, from string) *Mailer {
+	if from != "" && !containsAngleBrackets(from) {
+		from = fmt.Sprintf("Alaya Archive <%s>", from)
+	}
 	return &Mailer{
-		apiKey:    apiKey,
-		fromEmail: fromEmail,
-		fromName:  "Alaya Archive",
-		client:    &http.Client{Timeout: 10 * time.Second},
+		apiKey: apiKey,
+		from:   from,
+		client: &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
-type sgMessage struct {
-	Personalizations []sgPersonalization `json:"personalizations"`
-	From             sgAddr              `json:"from"`
-	Subject          string              `json:"subject"`
-	Content          []sgContent         `json:"content"`
+func containsAngleBrackets(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == '<' {
+			return true
+		}
+	}
+	return false
 }
 
-type sgPersonalization struct {
-	To []sgAddr `json:"to"`
-}
-
-type sgAddr struct {
-	Email string `json:"email"`
-	Name  string `json:"name,omitempty"`
-}
-
-type sgContent struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
+type resendRequest struct {
+	From    string   `json:"from"`
+	To      []string `json:"to"`
+	Subject string   `json:"subject"`
+	HTML    string   `json:"html,omitempty"`
+	Text    string   `json:"text,omitempty"`
 }
 
 func (m *Mailer) Send(to, subject, textBody, htmlBody string) error {
-	if m.apiKey == "" || m.fromEmail == "" {
+	if m.apiKey == "" || m.from == "" {
 		log.Printf("email not configured; would have sent to %s: %s", to, subject)
 		return nil
 	}
 
-	msg := sgMessage{
-		Personalizations: []sgPersonalization{{To: []sgAddr{{Email: to}}}},
-		From:             sgAddr{Email: m.fromEmail, Name: m.fromName},
-		Subject:          subject,
-		Content: []sgContent{
-			{Type: "text/plain", Value: textBody},
-			{Type: "text/html", Value: htmlBody},
-		},
-	}
-
-	body, err := json.Marshal(msg)
+	body, err := json.Marshal(resendRequest{
+		From:    m.from,
+		To:      []string{to},
+		Subject: subject,
+		HTML:    htmlBody,
+		Text:    textBody,
+	})
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", "https://api.sendgrid.com/v3/mail/send", bytes.NewReader(body))
+	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -83,7 +78,7 @@ func (m *Mailer) Send(to, subject, textBody, htmlBody string) error {
 
 	if resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("sendgrid returned %d: %s", resp.StatusCode, respBody)
+		return fmt.Errorf("resend returned %d: %s", resp.StatusCode, respBody)
 	}
 	return nil
 }

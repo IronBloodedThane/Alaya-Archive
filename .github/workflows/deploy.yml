@@ -49,8 +49,8 @@ jobs:
             --set-env-vars "SECRET_KEY=${{ secrets.SECRET_KEY }}" \
             --set-env-vars "^|^CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}" \
             --set-env-vars "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" \
-            --set-env-vars "SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}" \
-            --set-env-vars "SENDGRID_FROM_EMAIL=${{ secrets.SENDGRID_FROM_EMAIL }}"
+            --set-env-vars "EMAIL_API_KEY=${{ secrets.EMAIL_API_KEY }}" \
+            --set-env-vars "EMAIL_FROM=${{ secrets.EMAIL_FROM }}"
 
       - name: Build frontend
         working-directory: frontend

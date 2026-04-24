@@ -11,8 +11,8 @@ type Config struct {
 	SecretKey               string
 	CORSOrigins             string
 	FrontendURL             string
-	SendGridAPIKey          string
-	SendGridFromEmail       string
+	EmailAPIKey             string
+	EmailFrom               string
 	AccessTokenExpireMin    int
 	RefreshTokenExpireDays  int
 	RateLimitEnabled        bool
@@ -25,8 +25,8 @@ func Load() *Config {
 		SecretKey:               getEnv("SECRET_KEY", "change-me-in-production"),
 		CORSOrigins:             getEnv("CORS_ORIGINS", "http://localhost:5173"),
 		FrontendURL:             getEnv("FRONTEND_URL", "http://localhost:5173"),
-		SendGridAPIKey:          getEnv("SENDGRID_API_KEY", ""),
-		SendGridFromEmail:       getEnv("SENDGRID_FROM_EMAIL", ""),
+		EmailAPIKey:             getEnv("EMAIL_API_KEY", ""),
+		EmailFrom:               getEnv("EMAIL_FROM", ""),
 		AccessTokenExpireMin:    getEnvInt("ACCESS_TOKEN_EXPIRE_MINUTES", 15),
 		RefreshTokenExpireDays:  getEnvInt("REFRESH_TOKEN_EXPIRE_DAYS", 30),
 		RateLimitEnabled:        getEnv("RATE_LIMIT_ENABLED", "true") == "true",
