@@ -9,5 +9,7 @@ Disallow: /collection/
 Disallow: /profile
 Disallow: /friends
 Disallow: /feed
+Disallow: /verify-email
+Disallow: /reset-password
 
 Sitemap: https://alaya-archive.com/sitemap.xml

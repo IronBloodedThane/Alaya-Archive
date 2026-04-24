@@ -4,12 +4,16 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/alaya-archive/backend-go/internal/auth"
 	"github.com/alaya-archive/backend-go/internal/config"
+	"github.com/alaya-archive/backend-go/internal/email"
 	"github.com/alaya-archive/backend-go/internal/middleware"
 	"github.com/alaya-archive/backend-go/internal/repository"
 
@@ -17,12 +21,32 @@ import (
 )
 
 type AuthHandler struct {
-	users *repository.UserRepository
-	cfg   *config.Config
+	users  *repository.UserRepository
+	mailer *email.Mailer
+	cfg    *config.Config
 }
 
-func NewAuthHandler(users *repository.UserRepository, cfg *config.Config) *AuthHandler {
-	return &AuthHandler{users: users, cfg: cfg}
+func NewAuthHandler(users *repository.UserRepository, mailer *email.Mailer, cfg *config.Config) *AuthHandler {
+	return &AuthHandler{users: users, mailer: mailer, cfg: cfg}
+}
+
+func (h *AuthHandler) verifyURL(token string) string {
+	return fmt.Sprintf("%s/verify-email?token=%s", strings.TrimRight(h.cfg.FrontendURL, "/"), url.QueryEscape(token))
+}
+
+func (h *AuthHandler) resetURL(token string) string {
+	return fmt.Sprintf("%s/reset-password?token=%s", strings.TrimRight(h.cfg.FrontendURL, "/"), url.QueryEscape(token))
+}
+
+func (h *AuthHandler) sendVerification(userEmail, userID string) {
+	token, err := auth.CreateToken(userID, auth.EmailVerification, h.cfg.SecretKey, 24*time.Hour)
+	if err != nil {
+		log.Printf("failed to create verification token for %s: %v", userEmail, err)
+		return
+	}
+	if err := h.mailer.SendVerification(userEmail, h.verifyURL(token)); err != nil {
+		log.Printf("failed to send verification email to %s: %v", userEmail, err)
+	}
 }
 
 type registerRequest struct {
@@ -96,8 +120,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate verification token (in production, send via email)
-	_, _ = auth.CreateToken(user.ID, auth.EmailVerification, h.cfg.SecretKey, 24*time.Hour)
+	h.sendVerification(user.Email, user.ID)
 
 	tokens, err := h.createTokenPair(user.ID)
 	if err != nil {
@@ -199,8 +222,14 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate reset token (in production, send via email)
-	_, _ = auth.CreateToken(user.ID, auth.PasswordReset, h.cfg.SecretKey, time.Hour)
+	token, err := auth.CreateToken(user.ID, auth.PasswordReset, h.cfg.SecretKey, time.Hour)
+	if err != nil {
+		log.Printf("failed to create reset token for %s: %v", user.Email, err)
+		return
+	}
+	if err := h.mailer.SendPasswordReset(user.Email, h.resetURL(token)); err != nil {
+		log.Printf("failed to send reset email to %s: %v", user.Email, err)
+	}
 }
 
 func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
@@ -318,7 +347,7 @@ func (h *AuthHandler) ResendVerification(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	_, _ = auth.CreateToken(user.ID, auth.EmailVerification, h.cfg.SecretKey, 24*time.Hour)
+	h.sendVerification(user.Email, user.ID)
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "verification email sent"})
 }

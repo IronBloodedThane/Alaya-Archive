@@ -7,6 +7,7 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/alaya-archive/backend-go/internal/config"
+	"github.com/alaya-archive/backend-go/internal/email"
 	"github.com/alaya-archive/backend-go/internal/handler"
 	"github.com/alaya-archive/backend-go/internal/middleware"
 	"github.com/alaya-archive/backend-go/internal/repository"
@@ -24,7 +25,9 @@ func NewRouter(db *sql.DB, cfg *config.Config) *chi.Mux {
 	mediaRepo := repository.NewMediaRepository(db)
 	socialRepo := repository.NewSocialRepository(db)
 
-	authHandler := handler.NewAuthHandler(userRepo, cfg)
+	mailer := email.NewMailer(cfg.SendGridAPIKey, cfg.SendGridFromEmail)
+
+	authHandler := handler.NewAuthHandler(userRepo, mailer, cfg)
 	userHandler := handler.NewUserHandler(userRepo, cfg)
 	mediaHandler := handler.NewMediaHandler(mediaRepo, userRepo, cfg)
 	socialHandler := handler.NewSocialHandler(socialRepo, userRepo, cfg)

@@ -1,12 +1,13 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
-import { updateProfile, uploadAvatar, deleteAvatar } from '../api/auth'
+import { updateProfile, uploadAvatar, deleteAvatar, deleteAccount } from '../api/auth'
 import Avatar from '../components/Avatar'
 
 export default function Profile() {
-  const { user, updateUser } = useAuth()
+  const { user, updateUser, logoutUser } = useAuth()
+  const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const [form, setForm] = useState({
     display_name: user?.display_name || '',
@@ -16,6 +17,8 @@ export default function Profile() {
   const [saved, setSaved] = useState(false)
   const [avatarError, setAvatarError] = useState('')
   const [copied, setCopied] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const [deleteError, setDeleteError] = useState('')
 
   const publicPath = user?.username ? `/user/${user.username}` : ''
   const publicUrl = user?.username && typeof window !== 'undefined' ? `${window.location.origin}${publicPath}` : ''
@@ -50,6 +53,27 @@ export default function Profile() {
     mutationFn: deleteAvatar,
     onSuccess: (data) => updateUser(data),
   })
+
+  const accountDelete = useMutation({
+    mutationFn: () => deleteAccount('DELETE'),
+    onMutate: () => setDeleteError(''),
+    onSuccess: () => {
+      logoutUser()
+      navigate('/', { replace: true })
+    },
+    onError: (err) => {
+      setDeleteError(err?.response?.data?.error || 'failed to delete account')
+    },
+  })
+
+  const handleDelete = () => {
+    if (deleteConfirmation !== 'DELETE') return
+    const ok = window.confirm(
+      'This permanently deletes your account, collection, tags, friends, and all activity. It cannot be undone. Continue?'
+    )
+    if (!ok) return
+    accountDelete.mutate()
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -196,6 +220,37 @@ export default function Profile() {
           {mutation.isPending ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
         </button>
       </form>
+
+      <section className="mt-8 bg-white dark:bg-slate-800 rounded-xl p-6 border border-red-300 dark:border-red-900/60">
+        <h2 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Delete account</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+          Permanently remove your account and every piece of data tied to it — your
+          collection, tags, ratings, notes, profile, avatar, friend connections, and
+          activity. This cannot be undone.
+        </p>
+        <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
+          Type <span className="font-mono text-red-600 dark:text-red-400">DELETE</span> to confirm
+        </label>
+        <input
+          type="text"
+          value={deleteConfirmation}
+          onChange={(e) => setDeleteConfirmation(e.target.value)}
+          placeholder="DELETE"
+          autoComplete="off"
+          className={inputClass + ' mb-3'}
+        />
+        {deleteError && (
+          <p className="text-sm text-red-600 dark:text-red-400 mb-3">{deleteError}</p>
+        )}
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleteConfirmation !== 'DELETE' || accountDelete.isPending}
+          className="px-6 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg"
+        >
+          {accountDelete.isPending ? 'Deleting...' : 'Delete my account'}
+        </button>
+      </section>
     </div>
   )
 }

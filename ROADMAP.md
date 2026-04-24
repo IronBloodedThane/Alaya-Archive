@@ -23,6 +23,7 @@ Get the existing features solid before adding new ones.
 - [x] Verify CI/CD pipeline deploys correctly end-to-end
 - [ ] Add frontend to docker-compose for full local dev setup
 - [ ] Verify PWA installs as a mobile app on iOS and Android
+- [ ] Backup and restore strategy
 
 ## Phase 2: Better Catalog Experience
 
@@ -56,7 +57,6 @@ Harden everything before going bigger.
 - [ ] API contract tests
 - [ ] Rate limiting and abuse prevention
 - [ ] Monitoring and error tracking
-- [ ] Backup and restore strategy
 
 ## Phase 5: Long-Term — Media Server
 
