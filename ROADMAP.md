@@ -41,7 +41,7 @@ Make the core media tracking more useful and fun.
 Make it fun to use with friends.
 
 - [ ] Activity feed improvements (likes, comments on activity)
-- [ ] Share a list or collection publicly via link
+- [x] Share a list or collection publicly via link
 - [ ] Compare collections with a friend ("we both liked...")
 - [ ] User search / discovery
 - [ ] Notifications (in-app and/or push)

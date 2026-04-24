@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getPublicCollection } from '../api/media'
 import Avatar from '../components/Avatar'
+import ShareButtons from '../components/ShareButtons'
 import { useAuth } from '../hooks/useAuth'
 import { SITE_URL, SITE_NAME } from '../seo'
 
@@ -23,17 +24,6 @@ export default function PublicProfile() {
   const { username } = useParams()
   const { user } = useAuth()
   const [type, setType] = useState('all')
-  const [copied, setCopied] = useState(false)
-
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Clipboard not available
-    }
-  }
 
   const params = { limit: 100, ...(type !== 'all' && { type }) }
   const { data, isLoading, isError, error } = useQuery({
@@ -114,13 +104,11 @@ export default function PublicProfile() {
                     <p className="text-slate-600 dark:text-slate-300 mt-2 whitespace-pre-wrap">{data.user.bio}</p>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={copyLink}
-                  className="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg shrink-0"
-                >
-                  {copied ? 'Copied!' : 'Copy link'}
-                </button>
+                <ShareButtons
+                  url={profileUrl}
+                  title={profileTitle}
+                  text={`Check out ${displayName}'s collection on ${SITE_NAME}`}
+                />
               </div>
             </div>
 
