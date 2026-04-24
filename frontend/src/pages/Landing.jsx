@@ -1,24 +1,16 @@
 import { Link } from 'react-router-dom'
-import { SITE_URL, SITE_NAME, DEFAULT_DESCRIPTION } from '../seo'
 
 export default function Landing() {
-  const title = `${SITE_NAME} — Catalog Your Manga, Movies & Media Collection`
   return (
-    <>
-      <title>{title}</title>
-      <meta name="description" content={DEFAULT_DESCRIPTION} />
-      <link rel="canonical" href={`${SITE_URL}/`} />
-      <meta property="og:title" content={title} />
-      <meta property="og:description" content={DEFAULT_DESCRIPTION} />
-      <meta property="og:url" content={`${SITE_URL}/`} />
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center px-4 py-16">
       <div className="text-center max-w-2xl">
         <h1 className="text-5xl md:text-7xl font-bold text-white mb-4">
           Alaya <span className="text-indigo-400">Archive</span>
         </h1>
         <p className="text-xl text-slate-300 mb-8">
-          Catalog your manga, movies, anime, books, and games. Track what you own, what you've
-          watched or read, rate your collection, and share it with friends.
+          Alaya Archive is a catalog for your manga, movies, anime, books, and games. Track
+          what you own, what you've watched or read, rate and tag your collection, and
+          share it with friends.
         </p>
         <div className="flex gap-4 justify-center">
           <Link
@@ -63,6 +55,5 @@ export default function Landing() {
         </nav>
       </footer>
     </div>
-    </>
   )
 }

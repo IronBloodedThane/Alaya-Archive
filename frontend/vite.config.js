@@ -30,6 +30,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        navigateFallbackDenylist: [/\.xml$/, /\.txt$/, /^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /\/api\/v1\/.*/,
