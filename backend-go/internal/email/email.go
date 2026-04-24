@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+// Sender is the interface the auth handler depends on. Tests provide a fake
+// implementation that records calls instead of making HTTP requests.
+type Sender interface {
+	SendVerification(to, verifyURL string) error
+	SendPasswordReset(to, resetURL string) error
+}
+
 type Mailer struct {
 	apiKey string
 	from   string

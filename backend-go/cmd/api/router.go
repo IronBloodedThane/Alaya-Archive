@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -20,6 +21,11 @@ func NewRouter(db *sql.DB, cfg *config.Config) *chi.Mux {
 	r.Use(chimiddleware.Recoverer)
 	r.Use(chimiddleware.RequestID)
 	r.Use(middleware.CORS(cfg.CORSOrigins))
+
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
 
 	userRepo := repository.NewUserRepository(db)
 	mediaRepo := repository.NewMediaRepository(db)

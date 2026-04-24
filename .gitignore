@@ -27,3 +27,7 @@ Thumbs.db
 
 # Firebase
 .firebase/
+
+# Playwright
+frontend/playwright-report/
+frontend/test-results/

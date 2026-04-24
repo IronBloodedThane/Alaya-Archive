@@ -58,3 +58,20 @@ planned, in_progress, completed, on_hold, dropped
 - All code should have minimum 80% unit test coverage
 - All APIs should have automated contract testing
 - The UI should have automated testing around key functionality and workflows
+
+## Testing
+
+### Backend (Go)
+
+- Integration tests in `backend-go/internal/handler/*_test.go`
+- In-memory SQLite per test via `newTestEnv(t)`; pragma `foreign_keys=ON` is set explicitly so cascade tests exercise real behavior
+- Email sends are captured by a `fakeMailer` implementing `email.Sender` — no network calls
+- Run: `cd backend-go && go test ./...`
+
+### End-to-end (Playwright)
+
+- Tests in `frontend/e2e/*.spec.js`, fixtures in `frontend/e2e/fixtures.js`
+- `createUser` fixture registers a user via the API and auto-deletes it in teardown; emails are namespaced `e2e-<uuid>@test.alaya-archive.com` so stray data is easy to spot
+- For token-gated flows (verify-email, reset-password), tests mint their own JWTs with the shared `E2E_SECRET_KEY` rather than intercept real email — backend is configured with an empty `EMAIL_API_KEY` so no Resend calls are made during tests
+- Playwright's `webServer` config auto-starts the Go backend (on a separate `e2e.db`) and the Vite dev server
+- Run: `cd frontend && npm run test:e2e`

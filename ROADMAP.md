@@ -2,13 +2,14 @@
 
 ## What We Have Now
 
-- **Auth**: Register, login, JWT tokens, password reset/change, email verification (emails not yet sending)
+- **Auth**: Register, login, JWT tokens, password change, email verification with working transactional email (Resend)
 - **Media Catalog**: Full CRUD — add/edit/delete media with ratings, progress tracking, tags, cover images, status
 - **Search & Filter**: By type, status, tags, text search with pagination
-- **User Profiles**: Display name, bio, avatar upload, public profiles
-- **Social**: Follow/unfollow, friend requests, friends list, activity feed
-- **CI/CD**: Tests + lint on PR, deploy to Cloud Run + Firebase on merge (needs verification)
+- **User Profiles**: Display name, bio, avatar upload, public profiles, account deletion (cascading wipe)
+- **Social**: Follow/unfollow, friend requests, friends list, activity feed, share-to-social buttons on public profiles
+- **CI/CD**: Tests + lint on PR, deploy to Cloud Run + Firebase on merge — verified end-to-end
 - **Docker**: Local dev with docker-compose
+- **Public site**: Custom domain (alaya-archive.com), www→apex 301, About page, sitemap, SEO baseline
 
 ---
 
@@ -16,7 +17,8 @@
 
 Get the existing features solid before adding new ones.
 
-- [ ] Fix email sending (SendGrid integration for verification & password reset)
+- [x] Fix email sending (Resend integration for verification & password reset)
+- [x] Add /reset-password frontend page to consume password-reset emails
 - [x] Implement public collections endpoint
 - [ ] Bug fixes and UI polish
 - [x] Mobile PWA testing and fixes

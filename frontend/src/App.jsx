@@ -13,6 +13,8 @@ import PublicProfile from './pages/PublicProfile'
 import Friends from './pages/Friends'
 import Feed from './pages/Feed'
 import VerifyEmail from './pages/VerifyEmail'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import About from './pages/About'
 import NotFound from './pages/NotFound'
 
@@ -51,6 +53,8 @@ export default function App() {
       <Route path="/user/:username" element={<PublicProfile />} />
       <Route path="/about" element={<About />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )

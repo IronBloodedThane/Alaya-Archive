@@ -22,11 +22,11 @@ import (
 
 type AuthHandler struct {
 	users  *repository.UserRepository
-	mailer *email.Mailer
+	mailer email.Sender
 	cfg    *config.Config
 }
 
-func NewAuthHandler(users *repository.UserRepository, mailer *email.Mailer, cfg *config.Config) *AuthHandler {
+func NewAuthHandler(users *repository.UserRepository, mailer email.Sender, cfg *config.Config) *AuthHandler {
 	return &AuthHandler{users: users, mailer: mailer, cfg: cfg}
 }
 

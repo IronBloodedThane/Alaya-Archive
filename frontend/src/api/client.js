@@ -29,7 +29,11 @@ client.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Only treat 401s as session expiry when the request actually carried an
+    // Authorization header. Otherwise a wrong-password login 401 would also
+    // trigger the refresh-or-redirect flow, wiping the error state.
+    const hadAuthHeader = !!originalRequest.headers?.Authorization
+    if (error.response?.status === 401 && !originalRequest._retry && hadAuthHeader) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })

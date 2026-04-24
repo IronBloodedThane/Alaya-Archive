@@ -10,6 +10,7 @@ Disallow: /profile
 Disallow: /friends
 Disallow: /feed
 Disallow: /verify-email
+Disallow: /forgot-password
 Disallow: /reset-password
 
 Sitemap: https://alaya-archive.com/sitemap.xml

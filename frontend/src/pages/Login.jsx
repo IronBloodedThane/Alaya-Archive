@@ -40,8 +40,9 @@ export default function Login() {
           )}
 
           <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-300 mb-1">Email or Username</label>
+            <label htmlFor="login-identifier" className="block text-sm font-medium text-slate-300 mb-1">Email or Username</label>
             <input
+              id="login-identifier"
               type="text"
               value={login}
               onChange={(e) => setLogin(e.target.value)}
@@ -51,8 +52,9 @@ export default function Login() {
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
+            <label htmlFor="login-password" className="block text-sm font-medium text-slate-300 mb-1">Password</label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -70,6 +72,10 @@ export default function Login() {
           </button>
 
           <p className="mt-4 text-center text-sm text-slate-400">
+            <Link to="/forgot-password" className="text-indigo-400 hover:text-indigo-300">Forgot your password?</Link>
+          </p>
+
+          <p className="mt-2 text-center text-sm text-slate-400">
             Don't have an account?{' '}
             <Link to="/register" className="text-indigo-400 hover:text-indigo-300">Register</Link>
           </p>
