@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getPublicCollection } from '../api/media'
 import Avatar from '../components/Avatar'
 import { useAuth } from '../hooks/useAuth'
+import { SITE_URL, SITE_NAME } from '../seo'
 
 const MEDIA_TYPES = ['all', 'manga', 'anime', 'movie', 'book', 'game', 'tv_show', 'music', 'other']
 
@@ -43,7 +44,24 @@ export default function PublicProfile() {
 
   const notFound = isError && error?.response?.status === 404
 
+  const displayName = data?.user?.display_name || data?.user?.username || username
+  const profileTitle = data ? `${displayName} (@${data.user.username}) — ${SITE_NAME}` : `@${username} — ${SITE_NAME}`
+  const profileDescription = data
+    ? (data.user.bio?.trim()
+        || `${displayName}'s media collection on ${SITE_NAME} — ${data.total} item${data.total === 1 ? '' : 's'}.`)
+    : `View ${username}'s public media collection on ${SITE_NAME}.`
+  const profileUrl = `${SITE_URL}/user/${username}`
+
   return (
+    <>
+      <title>{profileTitle}</title>
+      <meta name="description" content={profileDescription} />
+      <link rel="canonical" href={profileUrl} />
+      <meta property="og:type" content="profile" />
+      <meta property="og:title" content={profileTitle} />
+      <meta property="og:description" content={profileDescription} />
+      <meta property="og:url" content={profileUrl} />
+      {notFound && <meta name="robots" content="noindex,follow" />}
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <header className="bg-white dark:bg-slate-800 shadow-lg">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -158,5 +176,6 @@ export default function PublicProfile() {
         )}
       </main>
     </div>
+    </>
   )
 }

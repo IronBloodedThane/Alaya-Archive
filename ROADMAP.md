@@ -19,14 +19,16 @@ Get the existing features solid before adding new ones.
 - [ ] Fix email sending (SendGrid integration for verification & password reset)
 - [x] Implement public collections endpoint
 - [ ] Bug fixes and UI polish
-- [ ] Mobile PWA testing and fixes
-- [ ] Verify CI/CD pipeline deploys correctly end-to-end
+- [x] Mobile PWA testing and fixes
+- [x] Verify CI/CD pipeline deploys correctly end-to-end
 - [ ] Add frontend to docker-compose for full local dev setup
+- [ ] Verify PWA installs as a mobile app on iOS and Android
 
 ## Phase 2: Better Catalog Experience
 
 Make the core media tracking more useful and fun.
 
+- [ ] Barcode scanning for metadata lookup on collection items
 - [ ] Import from external APIs (MyAnimeList, TMDB, IGDB, OpenLibrary)
 - [ ] Bulk add / quick add media
 - [ ] Custom lists / shelves (e.g. "Top 10 Anime", "Watch with Dad")

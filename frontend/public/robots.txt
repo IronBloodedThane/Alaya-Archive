@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /user/
+Disallow: /login
+Disallow: /register
+Disallow: /dashboard
+Disallow: /collection
+Disallow: /collection/
+Disallow: /profile
+Disallow: /friends
+Disallow: /feed
+
+Sitemap: https://alaya-archive.com/sitemap.xml

@@ -1,7 +1,16 @@
 import { Link } from 'react-router-dom'
+import { SITE_URL, SITE_NAME, DEFAULT_DESCRIPTION } from '../seo'
 
 export default function Landing() {
+  const title = `${SITE_NAME} — Catalog Your Manga, Movies & Media Collection`
   return (
+    <>
+      <title>{title}</title>
+      <meta name="description" content={DEFAULT_DESCRIPTION} />
+      <link rel="canonical" href={`${SITE_URL}/`} />
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={DEFAULT_DESCRIPTION} />
+      <meta property="og:url" content={`${SITE_URL}/`} />
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center px-4">
       <div className="text-center max-w-2xl">
         <h1 className="text-5xl md:text-7xl font-bold text-white mb-4">
@@ -42,5 +51,6 @@ export default function Landing() {
         </div>
       </div>
     </div>
+    </>
   )
 }
