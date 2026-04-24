@@ -47,7 +47,7 @@ jobs:
             --set-env-vars "DATABASE_PATH=/data/alaya-archive.db" \
             --set-env-vars "DB_JOURNAL_MODE=DELETE" \
             --set-env-vars "SECRET_KEY=${{ secrets.SECRET_KEY }}" \
-            --set-env-vars "CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}" \
+            --set-env-vars "^|^CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}" \
             --set-env-vars "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" \
             --set-env-vars "SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}" \
             --set-env-vars "SENDGRID_FROM_EMAIL=${{ secrets.SENDGRID_FROM_EMAIL }}"
