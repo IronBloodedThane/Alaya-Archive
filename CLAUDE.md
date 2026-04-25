@@ -51,7 +51,23 @@ planned, in_progress, completed, on_hold, dropped
 - Frontend: Firebase Hosting (CDN, SPA rewrites, Cloud Run API proxy)
 - Backend: Google Cloud Run (scale-to-zero)
 - CI/CD: GitHub Actions (test + lint on PR, deploy on merge to main)
-- SQLite persistence on Cloud Run: TBD (Litestream + GCS recommended)
+- SQLite persistence on Cloud Run: GCS bucket mounted as a volume at `/data`
+  via the `--add-volume type=cloud-storage` flag in the deploy workflow
+- Backups: GCS object versioning on the live bucket plus a daily external
+  snapshot via `.github/workflows/backup.yml` to a separate backups bucket.
+  Setup and restore steps in `BACKUP.md`.
+
+## Local development with docker-compose
+
+`docker-compose.yml` brings up the full stack:
+
+- `api` (Go backend) on `:8080`, db file in a named volume
+- `frontend` (Vite dev server) on `:5173`, hot reload via bind mount
+- Frontend's `/api/*` proxy points at the `api` service via the
+  `VITE_API_PROXY_TARGET` env var
+
+`docker compose up --build`. Run without docker by starting each part
+manually if you prefer (see Go API and Frontend sections above).
 
 ## Quality
 

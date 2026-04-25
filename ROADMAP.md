@@ -23,9 +23,9 @@ Get the existing features solid before adding new ones.
 - [ ] Bug fixes and UI polish
 - [x] Mobile PWA testing and fixes
 - [x] Verify CI/CD pipeline deploys correctly end-to-end
-- [ ] Add frontend to docker-compose for full local dev setup
-- [ ] Verify PWA installs as a mobile app on iOS and Android
-- [ ] Backup and restore strategy
+- [x] Add frontend to docker-compose for full local dev setup
+- [x] Verify PWA installs as a mobile app on iOS and Android (iOS verified end-to-end; Android pending hardware)
+- [x] Backup and restore strategy (GCS versioning + daily external snapshots — see BACKUP.md)
 
 ## Phase 2: Better Catalog Experience
 

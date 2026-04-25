@@ -9,10 +9,27 @@ services:
       - SECRET_KEY=${SECRET_KEY:-dev-secret-change-me}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
-      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
-      - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-}
+      - EMAIL_API_KEY=${EMAIL_API_KEY:-}
+      - EMAIL_FROM=${EMAIL_FROM:-}
     volumes:
       - db-data:/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      # Vite needs to reach the api service by its compose-network hostname,
+      # not localhost (which would point at the frontend container itself).
+      - VITE_API_PROXY_TARGET=http://api:8080
+    volumes:
+      # Bind-mount source for hot reload, but keep the container's
+      # node_modules so host-installed deps don't shadow them.
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
     restart: unless-stopped
 
 volumes:

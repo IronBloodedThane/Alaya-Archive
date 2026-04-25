@@ -1,0 +1,31 @@
+name: Backup database
+
+on:
+  schedule:
+    # Daily at 05:00 UTC (~midnight US Central). Cron syntax: m h dom mon dow.
+    - cron: '0 5 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Copy database to backups bucket
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%Y%m%d-%H%M%S)
+          SRC="gs://${{ secrets.DB_BUCKET }}/alaya-archive.db"
+          DST="gs://${{ secrets.BACKUP_BUCKET }}/alaya-archive-${STAMP}.db"
+          echo "Copying $SRC -> $DST"
+          gcloud storage cp "$SRC" "$DST"
+          gcloud storage objects describe "$DST" --format='value(size,timeCreated)'
