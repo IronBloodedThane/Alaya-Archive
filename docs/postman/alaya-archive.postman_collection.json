@@ -1,0 +1,231 @@
+{
+  "info": {
+    "name": "Alaya Archive — Lookup wiring",
+    "description": "Exercises the Alaya Archive Go API end-to-end: log in, then call /api/v1/lookup to verify the Google Books integration is wired correctly. The login request auto-saves the access token into the `accessToken` collection variable; every other request uses Bearer auth from that variable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string",
+      "description": "Local Go API. Swap for the Cloud Run URL to test prod wiring."
+    },
+    { "key": "login", "value": "", "type": "string", "description": "Email or username." },
+    { "key": "password", "value": "", "type": "string", "description": "Account password." },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health check",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "noauth" },
+        "url": { "raw": "{{baseUrl}}/healthz", "host": ["{{baseUrl}}"], "path": ["healthz"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login (saves access_token)",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "noauth" },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"login\": \"{{login}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "auth", "login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('returns access_token', () => pm.expect(body).to.have.property('access_token'));",
+              "pm.collectionVariables.set('accessToken', body.access_token);",
+              "pm.collectionVariables.set('refreshToken', body.refresh_token);",
+              "console.log('Saved access token (truncated):', String(body.access_token).slice(0, 12) + '...');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lookup — book by ISBN (happy path)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/lookup?type=book&isbn=9780547928227",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "lookup"],
+          "query": [
+            { "key": "type", "value": "book" },
+            { "key": "isbn", "value": "9780547928227", "description": "The Hobbit, Mariner Books edition. Replace with any ISBN-13 you want to test." }
+          ]
+        },
+        "description": "Primary path the barcode scanner will hit. Confirms the backend can reach Google Books and shape the response."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('provider is set', () => pm.expect(body.provider).to.be.a('string').and.not.empty);",
+              "pm.test('result is present', () => pm.expect(body).to.have.property('result'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lookup — book by query (text search)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/lookup?type=book&q=the hobbit tolkien&limit=5",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "lookup"],
+          "query": [
+            { "key": "type", "value": "book" },
+            { "key": "q", "value": "the hobbit tolkien" },
+            { "key": "limit", "value": "5" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('results is an array', () => pm.expect(body.results).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lookup — manga by ISBN",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/lookup?type=manga&isbn=9781421506630",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "lookup"],
+          "query": [
+            { "key": "type", "value": "manga" },
+            { "key": "isbn", "value": "9781421506630", "description": "Death Note vol. 1, VIZ. Confirms manga also routes through the Google Books provider." }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lookup — unknown ISBN (expect 404)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/lookup?type=book&isbn=0000000000000",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "lookup"],
+          "query": [
+            { "key": "type", "value": "book" },
+            { "key": "isbn", "value": "0000000000000" }
+          ]
+        },
+        "description": "Confirms the not-found path: handler should return 404 with a friendly message rather than 500."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('404 Not Found', () => pm.response.to.have.status(404));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lookup — bad request (missing isbn and q)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/lookup?type=book",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "lookup"],
+          "query": [{ "key": "type", "value": "book" }]
+        },
+        "description": "Confirms input validation. Should return 400."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('400 Bad Request', () => pm.response.to.have.status(400));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lookup — unauthenticated (expect 401)",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "noauth" },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/lookup?type=book&isbn=9780547928227",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "lookup"],
+          "query": [
+            { "key": "type", "value": "book" },
+            { "key": "isbn", "value": "9780547928227" }
+          ]
+        },
+        "description": "Confirms /lookup is auth-gated. Should return 401 with no token."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('401 Unauthorized', () => pm.response.to.have.status(401));"]
+          }
+        }
+      ]
+    }
+  ]
+}

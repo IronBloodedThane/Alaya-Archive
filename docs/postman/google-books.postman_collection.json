@@ -1,0 +1,117 @@
+{
+  "info": {
+    "name": "Google Books API",
+    "description": "Search and fetch volume metadata from the Google Books API. Uses an API key stored in the collection variable `apiKey`. OAuth is only required for personal bookshelf operations and is not included here.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://www.googleapis.com/books/v1",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string",
+      "description": "Google Cloud API key with the Books API enabled. Create at https://console.cloud.google.com/apis/credentials."
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "key", "type": "string" },
+      { "key": "value", "value": "{{apiKey}}", "type": "string" },
+      { "key": "in", "value": "query", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Verify API key (search 'hobbit')",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/volumes?q=hobbit&maxResults=1",
+          "host": ["{{baseUrl}}"],
+          "path": ["volumes"],
+          "query": [
+            { "key": "q", "value": "hobbit" },
+            { "key": "maxResults", "value": "1" }
+          ]
+        },
+        "description": "Smoke-test the API key. A 200 with a `totalItems` field means the key works."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('returns volumes', () => pm.expect(pm.response.json()).to.have.property('totalItems'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search by ISBN (barcode scan)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/volumes?q=isbn:9780547928227",
+          "host": ["{{baseUrl}}"],
+          "path": ["volumes"],
+          "query": [
+            { "key": "q", "value": "isbn:9780547928227", "description": "Replace with the scanned ISBN-13." }
+          ]
+        },
+        "description": "Primary lookup path for the barcode scanner. Use the ISBN-13 from the EAN-13 barcode."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "if (body.totalItems > 0) {",
+              "  pm.collectionVariables.set('lastVolumeId', body.items[0].id);",
+              "  console.log('Saved volume id:', body.items[0].id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search by title + author",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/volumes?q=intitle:hobbit+inauthor:tolkien&maxResults=5",
+          "host": ["{{baseUrl}}"],
+          "path": ["volumes"],
+          "query": [
+            { "key": "q", "value": "intitle:hobbit+inauthor:tolkien" },
+            { "key": "maxResults", "value": "5" }
+          ]
+        },
+        "description": "Fallback search when no ISBN is available. Uses field qualifiers `intitle:` and `inauthor:`."
+      }
+    },
+    {
+      "name": "Get volume by id",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/volumes/{{lastVolumeId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["volumes", "{{lastVolumeId}}"]
+        },
+        "description": "Fetch full metadata for a single volume. `lastVolumeId` is set automatically by the ISBN search test script."
+      }
+    }
+  ]
+}

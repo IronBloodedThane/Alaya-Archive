@@ -11,6 +11,7 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       - EMAIL_API_KEY=${EMAIL_API_KEY:-}
       - EMAIL_FROM=${EMAIL_FROM:-}
+      - GOOGLE_BOOKS_API_KEY=${GOOGLE_BOOKS_API_KEY:-}
     volumes:
       - db-data:/data
     restart: unless-stopped
