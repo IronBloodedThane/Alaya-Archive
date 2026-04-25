@@ -4,4 +4,11 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Debug-only override: permit cleartext HTTP so the app can talk to
+         a local dev server (http://<lan-ip>:8080). Release builds inherit
+         the platform default (HTTPS-only) because this manifest is only
+         merged into debug builds. -->
+    <application
+        android:networkSecurityConfig="@xml/network_security_config" />
 </manifest>

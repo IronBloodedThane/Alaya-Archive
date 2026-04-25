@@ -1,30 +1,34 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:alaya_archive/auth_controller.dart';
 import 'package:alaya_archive/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('unauthenticated boot lands on the sign-in screen',
+      (tester) async {
+    final auth = AuthController(storage: InMemoryTokenStorage());
+    await auth.bootstrap();
+    await tester.pumpWidget(AlayaArchiveApp(auth: auth));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Sign in'), findsWidgets);
+    expect(find.text('Email or username'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.text('API base URL'), findsOneWidget);
+  });
+
+  testWidgets('authenticated boot lands on the scan screen', (tester) async {
+    final storage = InMemoryTokenStorage();
+    await storage.write('accessToken', 'fake-access');
+    await storage.write('refreshToken', 'fake-refresh');
+    final auth = AuthController(storage: storage);
+    await auth.bootstrap();
+
+    await tester.pumpWidget(AlayaArchiveApp(auth: auth));
+    await tester.pump();
+
+    expect(find.text('Scan a book barcode'), findsOneWidget);
+    expect(find.byIcon(Icons.logout), findsOneWidget);
   });
 }
