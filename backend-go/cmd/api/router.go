@@ -10,6 +10,7 @@ import (
 	"github.com/alaya-archive/backend-go/internal/config"
 	"github.com/alaya-archive/backend-go/internal/email"
 	"github.com/alaya-archive/backend-go/internal/handler"
+	"github.com/alaya-archive/backend-go/internal/lookup"
 	"github.com/alaya-archive/backend-go/internal/middleware"
 	"github.com/alaya-archive/backend-go/internal/repository"
 )
@@ -33,10 +34,13 @@ func NewRouter(db *sql.DB, cfg *config.Config) *chi.Mux {
 
 	mailer := email.NewMailer(cfg.EmailAPIKey, cfg.EmailFrom)
 
+	googleBooks := lookup.NewGoogleBooks(cfg.GoogleBooksAPIKey)
+
 	authHandler := handler.NewAuthHandler(userRepo, mailer, cfg)
 	userHandler := handler.NewUserHandler(userRepo, cfg)
 	mediaHandler := handler.NewMediaHandler(mediaRepo, userRepo, cfg)
 	socialHandler := handler.NewSocialHandler(socialRepo, userRepo, cfg)
+	lookupHandler := handler.NewLookupHandler(googleBooks)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		// Public auth routes
@@ -76,6 +80,9 @@ func NewRouter(db *sql.DB, cfg *config.Config) *chi.Mux {
 				r.Post("/{mediaID}/rating", mediaHandler.RateMedia)
 				r.Post("/{mediaID}/tags", mediaHandler.AddTags)
 			})
+
+			// Metadata lookup (Google Books for now)
+			r.Get("/lookup", lookupHandler.Lookup)
 
 			// Social
 			r.Route("/social", func(r chi.Router) {

@@ -16,6 +16,7 @@ type Config struct {
 	AccessTokenExpireMin    int
 	RefreshTokenExpireDays  int
 	RateLimitEnabled        bool
+	GoogleBooksAPIKey       string
 }
 
 func Load() *Config {
@@ -30,6 +31,7 @@ func Load() *Config {
 		AccessTokenExpireMin:    getEnvInt("ACCESS_TOKEN_EXPIRE_MINUTES", 15),
 		RefreshTokenExpireDays:  getEnvInt("REFRESH_TOKEN_EXPIRE_DAYS", 30),
 		RateLimitEnabled:        getEnv("RATE_LIMIT_ENABLED", "true") == "true",
+		GoogleBooksAPIKey:       getEnv("GOOGLE_BOOKS_API_KEY", ""),
 	}
 }
 
