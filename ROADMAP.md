@@ -13,21 +13,21 @@
 
 ---
 
-## Phase 1: Polish & Fix (Current)
+## Phase 1: Polish & Fix
 
 Get the existing features solid before adding new ones.
 
 - [x] Fix email sending (Resend integration for verification & password reset)
 - [x] Add /reset-password frontend page to consume password-reset emails
 - [x] Implement public collections endpoint
-- [ ] Bug fixes and UI polish
+- [x] Bug fixes and UI polish (initial pass; ongoing as features land)
 - [x] Mobile PWA testing and fixes
 - [x] Verify CI/CD pipeline deploys correctly end-to-end
 - [x] Add frontend to docker-compose for full local dev setup
 - [x] Verify PWA installs as a mobile app on iOS and Android (iOS verified end-to-end; Android pending hardware)
 - [x] Backup and restore strategy (GCS versioning + daily external snapshots — see BACKUP.md)
 
-## Phase 2: Better Catalog Experience
+## Phase 2: Better Catalog Experience (Current)
 
 Make the core media tracking more useful and fun.
 
