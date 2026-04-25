@@ -1,17 +1,31 @@
-# alaya_archive
+# Alaya Archive — Mobile (Flutter)
 
-A new Flutter project.
+Native Android + iOS app for the Alaya Archive media catalog. Complements the
+React PWA in `../frontend/` with mobile-first features (barcode scanning,
+camera-driven metadata lookup).
 
-## Getting Started
+Bundle id: `com.dewees.alaya_archive`
 
-This project is a starting point for a Flutter application.
+## Run
 
-A few resources to get you started if this is your first Flutter project:
+```sh
+flutter pub get
+flutter run            # pick a device when prompted
+flutter run -d <id>    # or target one directly (see `flutter devices`)
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Test
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter test
+```
+
+## Layout
+
+- `lib/` — Dart source
+- `android/`, `ios/` — platform projects
+- `test/` — widget + unit tests
+
+## Backend
+
+Talks to the Go API in `../backend-go/` (default `http://localhost:8080`).

@@ -31,6 +31,15 @@ Media collection catalog application for tracking manga, movies, anime, books, g
 - Dev server proxies `/api` to localhost:8080
 - Run locally: `cd frontend && npm install && npm run dev`
 
+## Mobile (mobile-flutter/)
+
+- Flutter app (Android + iOS), bundle id `com.dewees.alaya_archive`
+- Targets the same Go API as the React frontend
+- Initial focus is mobile-only features (barcode scanning, camera lookup)
+- Key deps: `mobile_scanner` (barcodes), `dio` (HTTP)
+- Run locally: `cd mobile-flutter && flutter pub get && flutter run`
+- Test: `cd mobile-flutter && flutter test`
+
 ## Database
 
 - SQLite with WAL journal mode, foreign keys enforced, 5s busy timeout
