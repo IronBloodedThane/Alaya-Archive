@@ -49,6 +49,23 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Generates Android mipmaps and iOS AppIcon set from a single source PNG.
+  # Run `dart run flutter_launcher_icons` after changing the source image.
+  flutter_launcher_icons: ^0.14.4
+
+# Source for app icon generation. The PNG mirrors frontend/public/icon-512.png
+# so the mobile app and the web PWA share branding.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  remove_alpha_ios: true
+  # Adaptive icon for Android 8+ — the gradient acts as the background, so
+  # we use the same image for the foreground layer too. Replace background
+  # with a hex if we later split foreground/background art.
+  adaptive_icon_background: "#252362"
+  adaptive_icon_foreground: "assets/icon/icon.png"
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
