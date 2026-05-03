@@ -50,7 +50,8 @@ jobs:
             --set-env-vars "^|^CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}" \
             --set-env-vars "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" \
             --set-env-vars "EMAIL_API_KEY=${{ secrets.EMAIL_API_KEY }}" \
-            --set-env-vars "EMAIL_FROM=${{ secrets.EMAIL_FROM }}"
+            --set-env-vars "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" \
+            --set-env-vars "GOOGLE_BOOKS_API_KEY=${{ secrets.GOOGLE_BOOKS_API_KEY }}"
 
       - name: Build frontend
         working-directory: frontend

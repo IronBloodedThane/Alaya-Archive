@@ -104,14 +104,24 @@ export default function SeriesDetail() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {items.map((item) => (
-          <VolumeCard key={item.id} item={item} />
+          <VolumeCard
+            key={item.id}
+            item={item}
+            fallbackCover={firstWithCover?.cover_image || ''}
+          />
         ))}
       </div>
     </div>
   )
 }
 
-function VolumeCard({ item }) {
+// fallbackCover lets every volume in a series show *some* cover even if its
+// own row has no cover_image saved (common when only one volume was scanned
+// and the others were typed in by hand). The visual tag (faded + "shared
+// cover" hint via opacity) makes it clear it's not a per-volume image.
+function VolumeCard({ item, fallbackCover }) {
+  const cover = item.cover_image || fallbackCover
+  const isFallback = !item.cover_image && !!fallbackCover
   return (
     <Link
       to={`/collection/${item.id}`}
@@ -127,8 +137,12 @@ function VolumeCard({ item }) {
           Vol. {item.series_position}
         </span>
       )}
-      {item.cover_image && (
-        <img src={item.cover_image} alt={item.title} className="w-full h-48 object-cover" />
+      {cover && (
+        <img
+          src={cover}
+          alt={item.title}
+          className={`w-full h-48 object-cover ${isFallback ? 'opacity-60' : ''}`}
+        />
       )}
       <div className="p-4">
         <h3 className="font-semibold dark:text-white truncate">{item.title}</h3>
