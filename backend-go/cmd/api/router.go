@@ -73,6 +73,7 @@ func NewRouter(db *sql.DB, cfg *config.Config) *chi.Mux {
 				r.Get("/", mediaHandler.ListMedia)
 				r.Post("/", mediaHandler.CreateMedia)
 				r.Get("/stats", mediaHandler.GetStats)
+				r.Get("/check", mediaHandler.CheckDuplicate)
 				r.Get("/search", mediaHandler.SearchMedia)
 				r.Get("/{mediaID}", mediaHandler.GetMedia)
 				r.Patch("/{mediaID}", mediaHandler.UpdateMedia)

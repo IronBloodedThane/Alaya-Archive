@@ -4,6 +4,9 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'api_client.dart';
 import 'auth_controller.dart';
+import 'batch_review_page.dart';
+import 'batch_scan_models.dart';
+import 'batch_scanner_page.dart';
 
 class ScanLookupPage extends StatefulWidget {
   const ScanLookupPage({super.key, required this.auth});
@@ -61,6 +64,18 @@ class _ScanLookupPageState extends State<ScanLookupPage> {
       return 'Network error: ${e.message ?? e.type.name}';
     }
     return 'Unexpected error: $e';
+  }
+
+  Future<void> _startBatchScan() async {
+    final items = await Navigator.of(context).push<List<ScannedItem>>(
+      MaterialPageRoute(builder: (_) => BatchScannerPage(client: _client)),
+    );
+    if (items == null || items.isEmpty || !mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BatchReviewPage(client: _client, items: items),
+      ),
+    );
   }
 
   Future<void> _editBaseUrl() async {
@@ -123,6 +138,12 @@ class _ScanLookupPageState extends State<ScanLookupPage> {
                 icon: const Icon(Icons.qr_code_scanner),
                 label: const Text('Scan a book barcode'),
                 onPressed: _busy ? null : _scanAndLookup,
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.library_add_outlined),
+                label: const Text('Batch scan'),
+                onPressed: _busy ? null : _startBatchScan,
               ),
               const SizedBox(height: 16),
               if (_scannedIsbn != null)

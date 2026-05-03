@@ -155,6 +155,27 @@ var migrations = []migration{
 		ALTER TABLE users ADD COLUMN avatar_mime TEXT DEFAULT '';
 		`,
 	},
+	{
+		version: 8,
+		name:    "media_isbn",
+		sql: `
+		ALTER TABLE media ADD COLUMN isbn TEXT DEFAULT '';
+		CREATE INDEX IF NOT EXISTS idx_media_user_type_isbn ON media(user_id, media_type, isbn);
+		`,
+	},
+	{
+		// list_type separates "things I own" from "things I want", which is
+		// orthogonal to status (consumption progress). Default 'owned' so
+		// existing rows behave as before. SQLite enforces the CHECK on new
+		// writes only — pre-existing nulls would slip past, but the column
+		// has a default so all backfilled rows are valid.
+		version: 9,
+		name:    "media_list_type",
+		sql: `
+		ALTER TABLE media ADD COLUMN list_type TEXT NOT NULL DEFAULT 'owned' CHECK(list_type IN ('owned', 'wishlist'));
+		CREATE INDEX IF NOT EXISTS idx_media_user_list_type ON media(user_id, list_type);
+		`,
+	},
 }
 
 func Migrate(db *sql.DB) error {

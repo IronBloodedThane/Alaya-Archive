@@ -21,6 +21,45 @@ class ApiClient {
       throw _toApiException(e);
     }
   }
+
+  // checkDuplicate returns existing media in the user's collection that
+  // match (mediaType, isbn). Empty list = no duplicates.
+  Future<List<MediaItem>> checkDuplicate({
+    required String mediaType,
+    required String isbn,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/media/check',
+        queryParameters: {'type': mediaType, 'isbn': isbn},
+      );
+      final data = response.data as Map<String, dynamic>;
+      final items = (data['items'] as List?) ?? const [];
+      return items
+          .map((e) => MediaItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw _toApiException(e);
+    }
+  }
+
+  // createMedia POSTs a single item with the given duplicate policy.
+  // Returns the saved/affected MediaItem. Throws ApiException on 409 when
+  // policy is 'error' — caller should re-issue with a different policy after
+  // asking the user.
+  Future<MediaItem> createMedia({
+    required Map<String, dynamic> payload,
+    String onDuplicate = 'error',
+  }) async {
+    try {
+      final body = Map<String, dynamic>.from(payload)
+        ..['on_duplicate'] = onDuplicate;
+      final response = await _dio.post('/api/v1/media/', data: body);
+      return MediaItem.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _toApiException(e);
+    }
+  }
 }
 
 ApiException _toApiException(DioException e) {
@@ -124,6 +163,50 @@ class LookupResult {
       isbn13: result['isbn_13'] as String?,
       isbn10: result['isbn_10'] as String?,
       pageCount: result['page_count'] as int?,
+    );
+  }
+}
+
+// MediaItem mirrors the backend's repository.Media struct — only the fields
+// we need on the mobile app are decoded. Used both for duplicate-check
+// results and create responses.
+class MediaItem {
+  MediaItem({
+    required this.id,
+    required this.mediaType,
+    required this.title,
+    required this.status,
+    this.creator,
+    this.isbn,
+    this.coverImage,
+    this.yearReleased,
+    this.rating,
+    this.notes,
+  });
+
+  final String id;
+  final String mediaType;
+  final String title;
+  final String status;
+  final String? creator;
+  final String? isbn;
+  final String? coverImage;
+  final int? yearReleased;
+  final int? rating;
+  final String? notes;
+
+  factory MediaItem.fromJson(Map<String, dynamic> json) {
+    return MediaItem(
+      id: json['id'] as String? ?? '',
+      mediaType: json['media_type'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      status: json['status'] as String? ?? 'planned',
+      creator: json['creator'] as String?,
+      isbn: json['isbn'] as String?,
+      coverImage: json['cover_image'] as String?,
+      yearReleased: json['year_released'] as int?,
+      rating: json['rating'] as int?,
+      notes: json['notes'] as String?,
     );
   }
 }

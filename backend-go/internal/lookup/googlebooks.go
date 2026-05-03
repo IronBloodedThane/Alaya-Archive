@@ -178,10 +178,20 @@ func (v googleBooksVolume) toResult() *Result {
 }
 
 func pickCover(l googleBooksImageLinks) string {
-	if l.Thumbnail != "" {
-		return l.Thumbnail
+	raw := l.Thumbnail
+	if raw == "" {
+		raw = l.SmallThumbnail
 	}
-	return l.SmallThumbnail
+	if raw == "" {
+		return ""
+	}
+	// Google Books returns thumbnail URLs as http://. Android blocks cleartext
+	// image loads by default and most modern web pages run on https, so we
+	// upgrade the scheme on the way out. The CDN serves the same path on https.
+	if strings.HasPrefix(raw, "http://") {
+		raw = "https://" + raw[len("http://"):]
+	}
+	return raw
 }
 
 // parseYear pulls the leading 4-digit year out of a Google Books

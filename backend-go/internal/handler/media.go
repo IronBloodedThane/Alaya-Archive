@@ -40,8 +40,18 @@ type createMediaRequest struct {
 	EpisodesWatched *int   `json:"episodes_watched"`
 	ChaptersTotal *int     `json:"chapters_total"`
 	ChaptersRead  *int     `json:"chapters_read"`
+	ISBN          string   `json:"isbn"`
+	ListType      string   `json:"list_type"`
 	IsPublic      *bool    `json:"is_public"`
 	Tags          []string `json:"tags"`
+	// OnDuplicate controls behavior when an item with the same
+	// (user, media_type, isbn) already exists. One of:
+	//   "error"     — default; respond 409 with the existing record
+	//   "overwrite" — update the existing record from this payload
+	//   "skip"      — no-op, return the existing record with status 200
+	//   "allow"     — insert anyway as a second copy
+	// Empty isbn always behaves as "allow" since we don't fingerprint blanks.
+	OnDuplicate string `json:"on_duplicate"`
 }
 
 func (h *MediaHandler) CreateMedia(w http.ResponseWriter, r *http.Request) {
@@ -68,6 +78,62 @@ func (h *MediaHandler) CreateMedia(w http.ResponseWriter, r *http.Request) {
 		isPublic = *req.IsPublic
 	}
 
+	policy := req.OnDuplicate
+	if policy == "" {
+		policy = "error"
+	}
+	switch policy {
+	case "error", "overwrite", "skip", "allow":
+	default:
+		writeError(w, http.StatusBadRequest, "on_duplicate must be one of: error, overwrite, skip, allow")
+		return
+	}
+
+	listType := req.ListType
+	if listType == "" {
+		listType = "owned"
+	}
+	if listType != "owned" && listType != "wishlist" {
+		writeError(w, http.StatusBadRequest, "list_type must be one of: owned, wishlist")
+		return
+	}
+
+	if req.ISBN != "" {
+		existing, err := h.media.FindDuplicates(userID, req.MediaType, req.ISBN)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to check duplicates")
+			return
+		}
+		if len(existing) > 0 {
+			switch policy {
+			case "error":
+				writeJSON(w, http.StatusConflict, map[string]interface{}{
+					"error":    "duplicate",
+					"existing": existing,
+				})
+				return
+			case "skip":
+				writeJSON(w, http.StatusOK, existing[0])
+				return
+			case "overwrite":
+				target := existing[0]
+				applyCreateRequest(target, &req, status, listType, isPublic)
+				if err := h.media.Update(target); err != nil {
+					writeError(w, http.StatusInternalServerError, "failed to update media")
+					return
+				}
+				if req.Tags != nil {
+					h.media.SetTags(target.ID, req.Tags)
+				}
+				updated, _ := h.media.GetByID(target.ID)
+				writeJSON(w, http.StatusOK, updated)
+				return
+			case "allow":
+				// fall through to insert a new copy
+			}
+		}
+	}
+
 	m := &repository.Media{
 		ID:              newID(),
 		UserID:          userID,
@@ -88,6 +154,8 @@ func (h *MediaHandler) CreateMedia(w http.ResponseWriter, r *http.Request) {
 		EpisodesWatched: req.EpisodesWatched,
 		ChaptersTotal:   req.ChaptersTotal,
 		ChaptersRead:    req.ChaptersRead,
+		ISBN:            req.ISBN,
+		ListType:        listType,
 		IsPublic:        isPublic,
 	}
 
@@ -102,6 +170,89 @@ func (h *MediaHandler) CreateMedia(w http.ResponseWriter, r *http.Request) {
 
 	created, _ := h.media.GetByID(m.ID)
 	writeJSON(w, http.StatusCreated, created)
+}
+
+// applyCreateRequest copies fields from a create request onto an existing
+// record. Used by the on_duplicate=overwrite path. Only non-empty / non-nil
+// fields overwrite — matches the semantics of UpdateMedia.
+func applyCreateRequest(m *repository.Media, req *createMediaRequest, status, listType string, isPublic bool) {
+	m.Title = req.Title
+	if req.TitleOriginal != "" {
+		m.TitleOriginal = req.TitleOriginal
+	}
+	if req.Description != "" {
+		m.Description = req.Description
+	}
+	if req.CoverImage != "" {
+		m.CoverImage = req.CoverImage
+	}
+	m.Status = status
+	if req.Rating != nil {
+		m.Rating = req.Rating
+	}
+	if req.Notes != "" {
+		m.Notes = req.Notes
+	}
+	if req.YearReleased != nil {
+		m.YearReleased = req.YearReleased
+	}
+	if req.Creator != "" {
+		m.Creator = req.Creator
+	}
+	if req.Genre != "" {
+		m.Genre = req.Genre
+	}
+	if req.VolumesTotal != nil {
+		m.VolumesTotal = req.VolumesTotal
+	}
+	if req.VolumesOwned != nil {
+		m.VolumesOwned = req.VolumesOwned
+	}
+	if req.EpisodesTotal != nil {
+		m.EpisodesTotal = req.EpisodesTotal
+	}
+	if req.EpisodesWatched != nil {
+		m.EpisodesWatched = req.EpisodesWatched
+	}
+	if req.ChaptersTotal != nil {
+		m.ChaptersTotal = req.ChaptersTotal
+	}
+	if req.ChaptersRead != nil {
+		m.ChaptersRead = req.ChaptersRead
+	}
+	if req.ISBN != "" {
+		m.ISBN = req.ISBN
+	}
+	m.ListType = listType
+	m.IsPublic = isPublic
+}
+
+// CheckDuplicate handles GET /api/v1/media/check?type=<media_type>&isbn=<isbn>.
+// Returns existing items in the caller's collection that share the same
+// (media_type, isbn). Empty isbn returns an empty list — we don't fingerprint
+// blanks.
+func (h *MediaHandler) CheckDuplicate(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+	mediaType := r.URL.Query().Get("type")
+	isbn := r.URL.Query().Get("isbn")
+
+	if mediaType == "" {
+		writeError(w, http.StatusBadRequest, "type is required")
+		return
+	}
+
+	items, err := h.media.FindDuplicates(userID, mediaType, isbn)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to check duplicates")
+		return
+	}
+	if items == nil {
+		items = []*repository.Media{}
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"items": items,
+		"count": len(items),
+	})
 }
 
 func (h *MediaHandler) GetMedia(w http.ResponseWriter, r *http.Request) {
@@ -130,6 +281,7 @@ func (h *MediaHandler) ListMedia(w http.ResponseWriter, r *http.Request) {
 		Status:    r.URL.Query().Get("status"),
 		Search:    r.URL.Query().Get("search"),
 		Tag:       r.URL.Query().Get("tag"),
+		ListType:  r.URL.Query().Get("list_type"),
 		Limit:     queryInt(r, "limit", 50),
 		Offset:    queryInt(r, "offset", 0),
 	}
@@ -213,6 +365,16 @@ func (h *MediaHandler) UpdateMedia(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ChaptersRead != nil {
 		m.ChaptersRead = req.ChaptersRead
+	}
+	if req.ISBN != "" {
+		m.ISBN = req.ISBN
+	}
+	if req.ListType != "" {
+		if req.ListType != "owned" && req.ListType != "wishlist" {
+			writeError(w, http.StatusBadRequest, "list_type must be one of: owned, wishlist")
+			return
+		}
+		m.ListType = req.ListType
 	}
 	if req.IsPublic != nil {
 		m.IsPublic = *req.IsPublic

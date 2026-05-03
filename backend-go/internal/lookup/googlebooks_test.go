@@ -239,6 +239,44 @@ func TestGoogleBooks_WithHTTPClient(t *testing.T) {
 	}
 }
 
+func TestPickCover_UpgradesToHTTPS(t *testing.T) {
+	// Google Books returns http:// thumbnails; Android blocks cleartext, so
+	// pickCover normalizes to https:// (the same CDN serves both).
+	cases := []struct {
+		name string
+		in   googleBooksImageLinks
+		want string
+	}{
+		{
+			name: "http thumbnail upgraded",
+			in:   googleBooksImageLinks{Thumbnail: "http://books.google.com/x.jpg"},
+			want: "https://books.google.com/x.jpg",
+		},
+		{
+			name: "https thumbnail untouched",
+			in:   googleBooksImageLinks{Thumbnail: "https://books.google.com/x.jpg"},
+			want: "https://books.google.com/x.jpg",
+		},
+		{
+			name: "falls back to smallThumbnail and upgrades it too",
+			in:   googleBooksImageLinks{SmallThumbnail: "http://books.google.com/sm.jpg"},
+			want: "https://books.google.com/sm.jpg",
+		},
+		{
+			name: "empty stays empty",
+			in:   googleBooksImageLinks{},
+			want: "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := pickCover(tc.in); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestParseYear(t *testing.T) {
 	cases := map[string]int{
 		"":            0,

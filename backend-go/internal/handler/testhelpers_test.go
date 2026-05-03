@@ -57,14 +57,16 @@ func tokenFromURL(t *testing.T, raw string) string {
 
 // testEnv is the minimal set of wiring every auth test needs.
 type testEnv struct {
-	t        *testing.T
-	db       *sql.DB
-	cfg      *config.Config
-	mailer   *fakeMailer
-	userRepo *repository.UserRepository
-	auth     *AuthHandler
-	user     *UserHandler
-	router   *chi.Mux
+	t         *testing.T
+	db        *sql.DB
+	cfg       *config.Config
+	mailer    *fakeMailer
+	userRepo  *repository.UserRepository
+	mediaRepo *repository.MediaRepository
+	auth      *AuthHandler
+	user      *UserHandler
+	media     *MediaHandler
+	router    *chi.Mux
 }
 
 func newTestEnv(t *testing.T) *testEnv {
@@ -99,9 +101,11 @@ func newTestEnv(t *testing.T) *testEnv {
 	}
 	mailer := &fakeMailer{}
 	userRepo := repository.NewUserRepository(db)
+	mediaRepo := repository.NewMediaRepository(db)
 
 	authHandler := NewAuthHandler(userRepo, mailer, cfg)
 	userHandler := NewUserHandler(userRepo, cfg)
+	mediaHandler := NewMediaHandler(mediaRepo, userRepo, cfg)
 
 	r := chi.NewRouter()
 	r.Route("/api/v1", func(r chi.Router) {
@@ -119,20 +123,31 @@ func newTestEnv(t *testing.T) *testEnv {
 			r.Post("/auth/delete-account", authHandler.DeleteAccount)
 			r.Post("/auth/resend-verification", authHandler.ResendVerification)
 			r.Get("/users/me", userHandler.GetCurrentUser)
+
+			r.Route("/media", func(r chi.Router) {
+				r.Get("/", mediaHandler.ListMedia)
+				r.Post("/", mediaHandler.CreateMedia)
+				r.Get("/check", mediaHandler.CheckDuplicate)
+				r.Get("/{mediaID}", mediaHandler.GetMedia)
+				r.Patch("/{mediaID}", mediaHandler.UpdateMedia)
+				r.Delete("/{mediaID}", mediaHandler.DeleteMedia)
+			})
 		})
 	})
 
 	t.Cleanup(func() { db.Close() })
 
 	return &testEnv{
-		t:        t,
-		db:       db,
-		cfg:      cfg,
-		mailer:   mailer,
-		userRepo: userRepo,
-		auth:     authHandler,
-		user:     userHandler,
-		router:   r,
+		t:         t,
+		db:        db,
+		cfg:       cfg,
+		mailer:    mailer,
+		userRepo:  userRepo,
+		mediaRepo: mediaRepo,
+		auth:      authHandler,
+		user:      userHandler,
+		media:     mediaHandler,
+		router:    r,
 	}
 }
 

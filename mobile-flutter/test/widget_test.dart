@@ -29,6 +29,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Scan a book barcode'), findsOneWidget);
+    expect(find.text('Batch scan'), findsOneWidget);
     expect(find.byIcon(Icons.logout), findsOneWidget);
   });
 }
