@@ -46,10 +46,15 @@ export default function MediaDetail() {
           {media.creator && <p className="text-slate-400 mb-1">by {media.creator}</p>}
           {media.year_released && <p className="text-slate-500 text-sm mb-3">{media.year_released}</p>}
 
-          <div className="flex gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-4">
             <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-sm">
               {media.status.replace('_', ' ')}
             </span>
+            {media.list_type === 'wishlist' && (
+              <span className="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-sm">
+                Wishlist
+              </span>
+            )}
             {media.rating && (
               <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm">
                 {media.rating}/10
@@ -75,6 +80,13 @@ export default function MediaDetail() {
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+        {media.isbn && (
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-slate-500 mb-1">ISBN</h3>
+            <p className="dark:text-white font-mono text-sm">{media.isbn}</p>
+          </div>
+        )}
+
         {media.genre && (
           <div className="mb-4">
             <h3 className="text-sm font-medium text-slate-500 mb-1">Genre</h3>

@@ -5,6 +5,11 @@ import { listMedia } from '../api/media'
 
 const MEDIA_TYPES = ['all', 'manga', 'anime', 'movie', 'book', 'game', 'tv_show', 'music', 'other']
 const STATUSES = ['all', 'planned', 'in_progress', 'completed', 'on_hold', 'dropped']
+const LIST_TYPES = [
+  { value: 'all', label: 'All Lists' },
+  { value: 'owned', label: 'Collection' },
+  { value: 'wishlist', label: 'Wishlist' },
+]
 
 export default function Collection() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -12,10 +17,12 @@ export default function Collection() {
 
   const type = searchParams.get('type') || 'all'
   const status = searchParams.get('status') || 'all'
+  const listType = searchParams.get('list_type') || 'all'
 
   const params = {
     ...(type !== 'all' && { type }),
     ...(status !== 'all' && { status }),
+    ...(listType !== 'all' && { list_type: listType }),
     ...(search && { search }),
     limit: 50,
     offset: 0,
@@ -83,6 +90,15 @@ export default function Collection() {
             <option key={s} value={s}>{s === 'all' ? 'All Statuses' : s.replace('_', ' ')}</option>
           ))}
         </select>
+        <select
+          value={listType}
+          onChange={(e) => setFilter('list_type', e.target.value)}
+          className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg dark:text-white"
+        >
+          {LIST_TYPES.map((l) => (
+            <option key={l.value} value={l.value}>{l.label}</option>
+          ))}
+        </select>
       </div>
 
       {isLoading ? (
@@ -95,8 +111,13 @@ export default function Collection() {
               <Link
                 key={item.id}
                 to={`/collection/${item.id}`}
-                className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 transition-colors overflow-hidden"
+                className="relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 transition-colors overflow-hidden"
               >
+                {item.list_type === 'wishlist' && (
+                  <span className="absolute top-2 right-2 z-10 px-2 py-0.5 bg-amber-500/90 text-white text-xs font-semibold rounded-full">
+                    Wishlist
+                  </span>
+                )}
                 {item.cover_image && (
                   <img src={item.cover_image} alt={item.title} className="w-full h-48 object-cover" />
                 )}

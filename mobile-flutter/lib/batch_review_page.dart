@@ -22,6 +22,40 @@ class BatchReviewPage extends StatefulWidget {
 
 class _BatchReviewPageState extends State<BatchReviewPage> {
   bool _saving = false;
+  ListType _sessionListType = ListType.owned;
+
+  // Each item is a ChangeNotifier; the cards already listen to their own
+  // item, but the bottom Save button reads aggregate state (count of
+  // ready/saveable items) and lives on the parent. Subscribe at the page
+  // level so the parent rebuilds when any item transitions states (e.g.
+  // lookup completes), otherwise Save stays disabled until something else
+  // forces a setState.
+  @override
+  void initState() {
+    super.initState();
+    for (final item in widget.items) {
+      item.addListener(_onItemChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final item in widget.items) {
+      item.removeListener(_onItemChanged);
+    }
+    super.dispose();
+  }
+
+  void _onItemChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _applyListTypeToAll(ListType lt) {
+    setState(() => _sessionListType = lt);
+    for (final item in widget.items) {
+      item.update(listType: lt);
+    }
+  }
 
   bool get _allDone => widget.items.every(_isTerminal);
   bool _isTerminal(ScannedItem i) =>
@@ -29,19 +63,29 @@ class _BatchReviewPageState extends State<BatchReviewPage> {
       i.state == ScanItemState.skipped ||
       i.state == ScanItemState.lookupFailed;
 
-  // Items eligible for the next Save All pass: ready to send, or previously
-  // failed and worth retrying.
-  Iterable<ScannedItem> get _saveable => widget.items.where(
+  // Items the Save loop will visit: ready to send, or previously failed
+  // and worth retrying. _saveAll iterates this and may locally mark
+  // skip-duplicates as skipped without a network call.
+  Iterable<ScannedItem> get _pending => widget.items.where(
         (i) =>
             i.state == ScanItemState.ready ||
             i.state == ScanItemState.saveFailed,
       );
 
+  // Items the user actually wants pushed to the server. Excludes
+  // skip-on-duplicate, which would be a local no-op — Save All shouldn't
+  // light up just to mark items skipped on the client. The button reads
+  // its enabled state and count from this so "all items set to Skip"
+  // leaves only the Close button as a meaningful action.
+  Iterable<ScannedItem> get _serverWork =>
+      _pending.where((i) =>
+          !(i.hasDuplicates && i.policy == DuplicatePolicy.skip));
+
   Future<void> _saveAll() async {
     if (_saving) return;
     setState(() => _saving = true);
 
-    for (final item in _saveable.toList()) {
+    for (final item in _pending.toList()) {
       // If user wants to skip a duplicate, no need to round-trip the server.
       if (item.hasDuplicates && item.policy == DuplicatePolicy.skip) {
         item.markSkipped();
@@ -83,16 +127,26 @@ class _BatchReviewPageState extends State<BatchReviewPage> {
 
   @override
   Widget build(BuildContext context) {
-    final remaining = _saveable.length;
+    final remaining = _serverWork.length;
     return Scaffold(
       appBar: AppBar(
         title: Text('Review (${widget.items.length})'),
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(12),
-        itemCount: widget.items.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 8),
-        itemBuilder: (_, i) => _ReviewCard(item: widget.items[i]),
+      body: Column(
+        children: [
+          _SessionListTypeToggle(
+            value: _sessionListType,
+            onChanged: _applyListTypeToAll,
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+              itemCount: widget.items.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (_, i) => _ReviewCard(item: widget.items[i]),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
@@ -116,7 +170,9 @@ class _BatchReviewPageState extends State<BatchReviewPage> {
                         ? 'Saving…'
                         : remaining == 0 && _allDone
                             ? 'All done'
-                            : 'Save all ($remaining)',
+                            : remaining == 1
+                                ? 'Save'
+                                : 'Save all ($remaining)',
                   ),
                   onPressed: _saving || remaining == 0 ? null : _saveAll,
                 ),
@@ -146,12 +202,25 @@ class _ReviewCard extends StatelessWidget {
       listenable: item,
       builder: (_, _) {
         final scheme = Theme.of(context).colorScheme;
+        // Visually flag duplicate cards with a colored border so the user
+        // can scan the list and immediately spot anything needing a decision.
+        final borderSide = item.hasDuplicates
+            ? BorderSide(color: scheme.tertiary, width: 2)
+            : BorderSide.none;
         return Card(
+          shape: RoundedRectangleBorder(
+            side: borderSide,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (item.hasDuplicates) ...[
+                  _DuplicateBanner(item: item),
+                  const SizedBox(height: 12),
+                ],
                 _CardHeader(item: item),
                 const SizedBox(height: 8),
                 if (item.state == ScanItemState.lookingUp)
@@ -164,10 +233,6 @@ class _ReviewCard extends StatelessWidget {
                   )
                 else ...[
                   _Editable(item: item),
-                  if (item.hasDuplicates) ...[
-                    const SizedBox(height: 8),
-                    _DuplicatePicker(item: item),
-                  ],
                   if (item.state == ScanItemState.saving)
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
@@ -184,7 +249,7 @@ class _ReviewCard extends StatelessWidget {
                   if (item.state == ScanItemState.skipped)
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
-                      child: Text('· Skipped (already in collection)'),
+                      child: Text('· Skipped (kept existing item)'),
                     ),
                   if (item.state == ScanItemState.saveFailed)
                     Padding(
@@ -224,32 +289,16 @@ class _CardHeader extends StatelessWidget {
             ),
           ),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  _ListTypeChip(listType: item.listType),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'ISBN ${item.isbn}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                ],
-              ),
-              if (item.hasDuplicates)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    '⚠ Already in collection (${item.duplicates.length})',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.tertiary,
-                      fontSize: 12,
-                    ),
-                  ),
+              _ListTypeChip(item: item),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'ISBN ${item.isbn}',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
+              ),
             ],
           ),
         ),
@@ -258,26 +307,50 @@ class _CardHeader extends StatelessWidget {
   }
 }
 
+// _ListTypeChip is tappable: the session-level toggle at the top of the
+// review screen sets a default for every item, but the user can tap any
+// individual chip to override that single item's destination.
 class _ListTypeChip extends StatelessWidget {
-  const _ListTypeChip({required this.listType});
-  final ListType listType;
+  const _ListTypeChip({required this.item});
+  final ScannedItem item;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isWishlist = listType == ListType.wishlist;
+    final isWishlist = item.listType == ListType.wishlist;
     final bg = isWishlist ? scheme.tertiaryContainer : scheme.primaryContainer;
     final fg =
         isWishlist ? scheme.onTertiaryContainer : scheme.onPrimaryContainer;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
+    return InkWell(
+      onTap: () => item.update(
+        listType: isWishlist ? ListType.owned : ListType.wishlist,
       ),
-      child: Text(
-        listTypeLabel(listType),
-        style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w600),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isWishlist ? Icons.bookmark_border : Icons.inventory_2_outlined,
+              size: 14,
+              color: fg,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              listTypeLabel(item.listType),
+              style: TextStyle(
+                color: fg,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -340,51 +413,209 @@ class _EditableState extends State<_Editable> {
   }
 }
 
-class _DuplicatePicker extends StatelessWidget {
-  const _DuplicatePicker({required this.item});
+// _DuplicateBanner sits at the very top of a card whose ISBN already exists
+// in the user's collection. It surfaces the existing item, asks the user
+// what to do, and offers three explicit choices with a one-line description
+// each — so the user doesn't have to remember what "skip"/"overwrite"/
+// "add as copy" mean.
+class _DuplicateBanner extends StatelessWidget {
+  const _DuplicateBanner({required this.item});
   final ScannedItem item;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 6,
-      children: [
-        _PolicyChip(
-          label: 'Skip',
-          policy: DuplicatePolicy.skip,
-          item: item,
+    final scheme = Theme.of(context).colorScheme;
+    final existing = item.duplicates.first;
+    final n = item.duplicates.length;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.warning_amber_rounded,
+                  color: scheme.onTertiaryContainer),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      n == 1
+                          ? 'Already in your collection'
+                          : 'Already in your collection ($n copies)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onTertiaryContainer,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _existingLabel(existing),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onTertiaryContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'What do you want to do?',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: scheme.onTertiaryContainer,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _PolicyOption(
+            item: item,
+            policy: DuplicatePolicy.skip,
+            icon: Icons.skip_next,
+            label: 'Skip',
+            description: 'Keep what\'s already there. Don\'t change anything.',
+          ),
+          _PolicyOption(
+            item: item,
+            policy: DuplicatePolicy.overwrite,
+            icon: Icons.edit_note,
+            label: 'Overwrite',
+            description: 'Replace the existing entry with this scan\'s info.',
+          ),
+          _PolicyOption(
+            item: item,
+            policy: DuplicatePolicy.allow,
+            icon: Icons.add_box_outlined,
+            label: 'Add as a second copy',
+            description: 'Create a new entry alongside the existing one.',
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _existingLabel(MediaItem m) {
+    final parts = <String>[m.title];
+    if (m.creator != null && m.creator!.isNotEmpty) parts.add(m.creator!);
+    final label = parts.join(' — ');
+    return m.mediaType == 'book' ? '$label · ${_listLabel(m)}' : label;
+  }
+
+  String _listLabel(MediaItem m) =>
+      m.status.isEmpty ? 'in collection' : m.status;
+}
+
+class _PolicyOption extends StatelessWidget {
+  const _PolicyOption({
+    required this.item,
+    required this.policy,
+    required this.icon,
+    required this.label,
+    required this.description,
+  });
+  final ScannedItem item;
+  final DuplicatePolicy policy;
+  final IconData icon;
+  final String label;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final selected = item.policy == policy;
+    return InkWell(
+      onTap: () => item.update(policy: policy),
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
+              size: 20,
+              color: selected
+                  ? scheme.primary
+                  : scheme.onTertiaryContainer.withValues(alpha: 0.6),
+            ),
+            const SizedBox(width: 8),
+            Icon(icon, size: 18, color: scheme.onTertiaryContainer),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onTertiaryContainer,
+                    ),
+                  ),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onTertiaryContainer.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        _PolicyChip(
-          label: 'Overwrite',
-          policy: DuplicatePolicy.overwrite,
-          item: item,
-        ),
-        _PolicyChip(
-          label: 'Add as copy',
-          policy: DuplicatePolicy.allow,
-          item: item,
-        ),
-      ],
+      ),
     );
   }
 }
 
-class _PolicyChip extends StatelessWidget {
-  const _PolicyChip({
-    required this.label,
-    required this.policy,
-    required this.item,
-  });
-  final String label;
-  final DuplicatePolicy policy;
-  final ScannedItem item;
+// _SessionListTypeToggle sits at the top of the review screen. Picking a
+// value applies it to every item in the batch — the common case is that
+// the user is either at home (Collection) or in a store (Wishlist) and
+// wants the same destination for everything they just scanned. Per-item
+// overrides happen by tapping the chip on individual cards.
+class _SessionListTypeToggle extends StatelessWidget {
+  const _SessionListTypeToggle({required this.value, required this.onChanged});
+  final ListType value;
+  final ValueChanged<ListType> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: item.policy == policy,
-      onSelected: (_) => item.update(policy: policy),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      child: Row(
+        children: [
+          const Text('Add all to:'),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SegmentedButton<ListType>(
+              segments: const [
+                ButtonSegment(
+                  value: ListType.owned,
+                  label: Text('Collection'),
+                  icon: Icon(Icons.inventory_2_outlined),
+                ),
+                ButtonSegment(
+                  value: ListType.wishlist,
+                  label: Text('Wishlist'),
+                  icon: Icon(Icons.bookmark_border),
+                ),
+              ],
+              selected: {value},
+              onSelectionChanged: (s) => onChanged(s.first),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

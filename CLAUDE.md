@@ -10,6 +10,13 @@ Media collection catalog application for tracking manga, movies, anime, books, g
 - Migrations embedded in Go code (no separate migration tool needed)
 - Frontend is a React 19 PWA installable on mobile devices
 
+## Overarching Software Concerns
+- S.O.L.I.D. and D.R.Y. principles are important and should be adheared too.  Ask if they are going to be violated.  
+- Automated testing is of utmost importance.  Protecting us from accidentally making breaking changes is key.
+- All new feature should start with writing an automated test to cover the new functionality.  
+- 80% or better unit test coverage
+- Automated End-to-end testing should cover critical functionality flows
+
 ## Go API (backend-go/)
 
 - Router: chi, handlers in `internal/handler/`, one file per resource

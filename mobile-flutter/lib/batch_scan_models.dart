@@ -69,12 +69,12 @@ class ScannedItem extends ChangeNotifier {
   ScannedItem({
     required this.isbn,
     required this.mediaType,
-    required this.listType,
+    this.listType = ListType.owned,
   });
 
   final String isbn;
   final String mediaType;
-  final ListType listType;
+  ListType listType;
 
   ScanItemState state = ScanItemState.lookingUp;
   LookupResult? lookup;
@@ -129,6 +129,7 @@ class ScannedItem extends ChangeNotifier {
     String? status,
     String? notes,
     DuplicatePolicy? policy,
+    ListType? listType,
   }) {
     if (title != null) this.title = title;
     if (creator != null) this.creator = creator;
@@ -136,6 +137,7 @@ class ScannedItem extends ChangeNotifier {
     if (status != null) this.status = status;
     if (notes != null) this.notes = notes;
     if (policy != null) this.policy = policy;
+    if (listType != null) this.listType = listType;
     notifyListeners();
   }
 

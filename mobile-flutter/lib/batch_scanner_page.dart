@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'api_client.dart';
 import 'batch_scan_models.dart';
+import 'batch_scan_service.dart';
 
 // BatchScannerPage keeps the camera open and accumulates ISBNs as they are
 // scanned. The same ISBN is only added once per session. Each new ISBN
@@ -25,7 +26,6 @@ class _BatchScannerPageState extends State<BatchScannerPage> {
   );
   final _items = <ScannedItem>[];
   final _seen = <String>{};
-  ListType _listType = ListType.owned;
 
   @override
   void dispose() {
@@ -42,45 +42,11 @@ class _BatchScannerPageState extends State<BatchScannerPage> {
       if (!raw.startsWith('978') && !raw.startsWith('979')) continue;
       if (!_seen.add(raw)) continue;
 
-      final item = ScannedItem(
-        isbn: raw,
-        mediaType: 'book',
-        listType: _listType,
-      );
+      final item = ScannedItem(isbn: raw, mediaType: 'book');
       setState(() => _items.add(item));
       HapticFeedback.lightImpact();
-      _lookupAndCheck(item);
+      lookupAndCheckIsbn(widget.client, item);
     }
-  }
-
-  // Fires the lookup, then the duplicate check. Both errors are non-fatal —
-  // they just leave the item in a state the review page surfaces to the user.
-  Future<void> _lookupAndCheck(ScannedItem item) async {
-    try {
-      final result = await widget.client.lookupBookByIsbn(item.isbn);
-      item.applyLookup(result);
-    } catch (e) {
-      item.markLookupFailed(_humanError(e));
-      return;
-    }
-    try {
-      final dupes = await widget.client.checkDuplicate(
-        mediaType: item.mediaType,
-        isbn: item.isbn,
-      );
-      item.applyDuplicates(dupes);
-    } catch (_) {
-      // Non-fatal: review page can still save; backend's on_duplicate=error
-      // will catch the conflict if the check failed.
-    }
-  }
-
-  String _humanError(Object e) {
-    if (e is ApiException) {
-      if (e.status == 404) return 'No book found for this ISBN.';
-      return 'Lookup failed (${e.status}): ${e.message}';
-    }
-    return 'Lookup failed: $e';
   }
 
   void _removeItem(ScannedItem item) {
@@ -100,34 +66,6 @@ class _BatchScannerPageState extends State<BatchScannerPage> {
       appBar: AppBar(title: Text('Batch scan (${_items.length})')),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: Row(
-              children: [
-                const Text('Adding to:'),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SegmentedButton<ListType>(
-                    segments: const [
-                      ButtonSegment(
-                        value: ListType.owned,
-                        label: Text('Collection'),
-                        icon: Icon(Icons.inventory_2_outlined),
-                      ),
-                      ButtonSegment(
-                        value: ListType.wishlist,
-                        label: Text('Wishlist'),
-                        icon: Icon(Icons.bookmark_border),
-                      ),
-                    ],
-                    selected: {_listType},
-                    onSelectionChanged: (s) =>
-                        setState(() => _listType = s.first),
-                  ),
-                ),
-              ],
-            ),
-          ),
           Expanded(
             child: Stack(
               children: [
