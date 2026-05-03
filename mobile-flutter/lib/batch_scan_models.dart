@@ -86,6 +86,8 @@ class ScannedItem extends ChangeNotifier {
   String? yearReleased;
   String status = 'planned';
   String notes = '';
+  String series = '';
+  String? seriesPosition; // string for the text field, parsed to int on send
 
   // Duplicate detection result. Empty list = no duplicates.
   List<MediaItem> duplicates = const [];
@@ -102,6 +104,8 @@ class ScannedItem extends ChangeNotifier {
     title = result.title;
     creator = result.authors.join(', ');
     yearReleased = result.year?.toString();
+    series = result.series ?? '';
+    seriesPosition = result.seriesPosition?.toString();
     state = ScanItemState.ready;
     notifyListeners();
   }
@@ -130,6 +134,8 @@ class ScannedItem extends ChangeNotifier {
     String? notes,
     DuplicatePolicy? policy,
     ListType? listType,
+    String? series,
+    String? seriesPosition,
   }) {
     if (title != null) this.title = title;
     if (creator != null) this.creator = creator;
@@ -138,6 +144,8 @@ class ScannedItem extends ChangeNotifier {
     if (notes != null) this.notes = notes;
     if (policy != null) this.policy = policy;
     if (listType != null) this.listType = listType;
+    if (series != null) this.series = series;
+    if (seriesPosition != null) this.seriesPosition = seriesPosition;
     notifyListeners();
   }
 
@@ -175,9 +183,12 @@ class ScannedItem extends ChangeNotifier {
       'isbn': isbn,
       'list_type': listTypeName(listType),
       'notes': notes.trim(),
+      'series': series.trim(),
     };
     final year = int.tryParse(yearReleased ?? '');
     if (year != null) payload['year_released'] = year;
+    final pos = int.tryParse(seriesPosition ?? '');
+    if (pos != null) payload['series_position'] = pos;
     final cover = lookup?.coverImage;
     if (cover != null && cover.isNotEmpty) payload['cover_image'] = cover;
     final desc = lookup?.description;

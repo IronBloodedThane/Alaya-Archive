@@ -52,9 +52,11 @@ class AuthController extends ChangeNotifier {
   static const _kBaseUrl = 'baseUrl';
   static const _kAccessToken = 'accessToken';
   static const _kRefreshToken = 'refreshToken';
-  // Tim's dev machine on the home network. Android emulator users would use
-  // http://10.0.2.2:8080; iOS simulator users http://localhost:8080.
-  static const _defaultBaseUrl = 'http://10.0.1.18:8080';
+  // Production API. Override via the gear-icon dialog on the sign-in or
+  // home screen to point at a dev backend (e.g. http://10.0.1.18:8080 on
+  // a LAN, http://10.0.2.2:8080 from the Android emulator, or
+  // http://localhost:8080 from the iOS simulator).
+  static const _defaultBaseUrl = 'https://alaya-archive.com';
 
   final TokenStorage _storage;
 

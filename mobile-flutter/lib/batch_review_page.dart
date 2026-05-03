@@ -371,6 +371,10 @@ class _EditableState extends State<_Editable> {
     text: widget.item.yearReleased ?? '',
   );
   late final _notes = TextEditingController(text: widget.item.notes);
+  late final _series = TextEditingController(text: widget.item.series);
+  late final _seriesPos = TextEditingController(
+    text: widget.item.seriesPosition ?? '',
+  );
 
   @override
   void dispose() {
@@ -378,6 +382,8 @@ class _EditableState extends State<_Editable> {
     _creator.dispose();
     _year.dispose();
     _notes.dispose();
+    _series.dispose();
+    _seriesPos.dispose();
     super.dispose();
   }
 
@@ -401,6 +407,27 @@ class _EditableState extends State<_Editable> {
           keyboardType: TextInputType.number,
           decoration: const InputDecoration(labelText: 'Year'),
           onChanged: (v) => widget.item.update(yearReleased: v),
+        ),
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: _series,
+                decoration: const InputDecoration(labelText: 'Series'),
+                onChanged: (v) => widget.item.update(series: v),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                controller: _seriesPos,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Vol. #'),
+                onChanged: (v) => widget.item.update(seriesPosition: v),
+              ),
+            ),
+          ],
         ),
         TextField(
           controller: _notes,

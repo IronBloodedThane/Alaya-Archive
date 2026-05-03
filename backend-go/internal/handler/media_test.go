@@ -382,6 +382,91 @@ func TestListMedia_FiltersByListType(t *testing.T) {
 	}
 }
 
+func TestCreateMedia_PersistsSeries(t *testing.T) {
+	env := newTestEnv(t)
+	access, _ := env.registerUser("se1@test.com", "se1", "hunter22hunter22")
+
+	rec := env.do(http.MethodPost, "/api/v1/media/", bookPayload(map[string]interface{}{
+		"title":           "Berserk Vol. 1",
+		"series":          "Berserk",
+		"series_position": 1,
+	}), access)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create: got %d, body=%s", rec.Code, rec.Body.String())
+	}
+	var m repository.Media
+	decodeJSON(t, rec, &m)
+	if m.Series != "Berserk" {
+		t.Fatalf("series not persisted, got %q", m.Series)
+	}
+	if m.SeriesPosition == nil || *m.SeriesPosition != 1 {
+		t.Fatalf("series_position not persisted, got %v", m.SeriesPosition)
+	}
+}
+
+func TestUpdateMedia_SeriesEditable(t *testing.T) {
+	env := newTestEnv(t)
+	access, _ := env.registerUser("se2@test.com", "se2", "hunter22hunter22")
+
+	// Create without series.
+	rec := env.do(http.MethodPost, "/api/v1/media/", bookPayload(nil), access)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("seed: got %d", rec.Code)
+	}
+	var created repository.Media
+	decodeJSON(t, rec, &created)
+	if created.Series != "" {
+		t.Fatalf("expected no series initially, got %q", created.Series)
+	}
+
+	// Patch series in.
+	patch := map[string]interface{}{
+		"series":          "Dune",
+		"series_position": 1,
+	}
+	rec = env.do(http.MethodPatch, "/api/v1/media/"+created.ID, patch, access)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("patch: got %d, body=%s", rec.Code, rec.Body.String())
+	}
+	var updated repository.Media
+	decodeJSON(t, rec, &updated)
+	if updated.Series != "Dune" || updated.SeriesPosition == nil || *updated.SeriesPosition != 1 {
+		t.Fatalf("series patch failed: series=%q pos=%v", updated.Series, updated.SeriesPosition)
+	}
+}
+
+func TestListMedia_FiltersBySeries(t *testing.T) {
+	env := newTestEnv(t)
+	access, _ := env.registerUser("se3@test.com", "se3", "hunter22hunter22")
+
+	// Three items: two in "Berserk", one standalone.
+	for i, payload := range []map[string]interface{}{
+		{"title": "Berserk Vol. 1", "isbn": "9781593070205", "series": "Berserk", "series_position": 1},
+		{"title": "Berserk Vol. 2", "isbn": "9781593070571", "series": "Berserk", "series_position": 2},
+		{"title": "Dune", "isbn": "9780441172719"},
+	} {
+		body := bookPayload(payload)
+		if rec := env.do(http.MethodPost, "/api/v1/media/", body, access); rec.Code != http.StatusCreated {
+			t.Fatalf("seed item %d: got %d, body=%s", i, rec.Code, rec.Body.String())
+		}
+	}
+
+	rec := env.do(http.MethodGet, "/api/v1/media/?series=Berserk", nil, access)
+	var resp struct {
+		Items []repository.Media `json:"items"`
+		Total int                `json:"total"`
+	}
+	decodeJSON(t, rec, &resp)
+	if resp.Total != 2 {
+		t.Fatalf("expected 2 Berserk volumes, got %d", resp.Total)
+	}
+	for _, m := range resp.Items {
+		if m.Series != "Berserk" {
+			t.Errorf("non-Berserk row leaked through filter: %+v", m)
+		}
+	}
+}
+
 func TestCreateMedia_BlankISBNAlwaysAllowed(t *testing.T) {
 	env := newTestEnv(t)
 	access, _ := env.registerUser("n@test.com", "noisbn", "hunter22hunter22")

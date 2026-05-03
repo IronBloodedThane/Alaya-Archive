@@ -28,6 +28,8 @@ type Media struct {
 	ChaptersTotal   *int      `json:"chapters_total"`
 	ChaptersRead    *int      `json:"chapters_read"`
 	ISBN            string    `json:"isbn,omitempty"`
+	Series          string    `json:"series,omitempty"`
+	SeriesPosition  *int      `json:"series_position,omitempty"`
 	ListType        string    `json:"list_type"`
 	IsPublic        bool      `json:"is_public"`
 	Tags            []string  `json:"tags,omitempty"`
@@ -41,6 +43,7 @@ type MediaFilter struct {
 	Search    string
 	Tag       string
 	ListType  string
+	Series    string
 	Limit     int
 	Offset    int
 }
@@ -58,9 +61,9 @@ func (r *MediaRepository) Create(m *Media) error {
 		m.ListType = "owned"
 	}
 	_, err := r.db.Exec(
-		`INSERT INTO media (id, user_id, media_type, title, title_original, description, cover_image, status, rating, notes, year_released, creator, genre, volumes_total, volumes_owned, episodes_total, episodes_watched, chapters_total, chapters_read, isbn, list_type, is_public)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		m.ID, m.UserID, m.MediaType, m.Title, m.TitleOriginal, m.Description, m.CoverImage, m.Status, m.Rating, m.Notes, m.YearReleased, m.Creator, m.Genre, m.VolumesTotal, m.VolumesOwned, m.EpisodesTotal, m.EpisodesWatched, m.ChaptersTotal, m.ChaptersRead, m.ISBN, m.ListType, m.IsPublic,
+		`INSERT INTO media (id, user_id, media_type, title, title_original, description, cover_image, status, rating, notes, year_released, creator, genre, volumes_total, volumes_owned, episodes_total, episodes_watched, chapters_total, chapters_read, isbn, series, series_position, list_type, is_public)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		m.ID, m.UserID, m.MediaType, m.Title, m.TitleOriginal, m.Description, m.CoverImage, m.Status, m.Rating, m.Notes, m.YearReleased, m.Creator, m.Genre, m.VolumesTotal, m.VolumesOwned, m.EpisodesTotal, m.EpisodesWatched, m.ChaptersTotal, m.ChaptersRead, m.ISBN, m.Series, m.SeriesPosition, m.ListType, m.IsPublic,
 	)
 	return err
 }
@@ -73,7 +76,7 @@ func (r *MediaRepository) FindDuplicates(userID, mediaType, isbn string) ([]*Med
 		return nil, nil
 	}
 	rows, err := r.db.Query(
-		`SELECT id, user_id, media_type, title, title_original, description, cover_image, status, rating, notes, year_released, creator, genre, volumes_total, volumes_owned, episodes_total, episodes_watched, chapters_total, chapters_read, isbn, list_type, is_public, created_at, updated_at
+		`SELECT id, user_id, media_type, title, title_original, description, cover_image, status, rating, notes, year_released, creator, genre, volumes_total, volumes_owned, episodes_total, episodes_watched, chapters_total, chapters_read, isbn, series, series_position, list_type, is_public, created_at, updated_at
 		 FROM media WHERE user_id = ? AND media_type = ? AND isbn = ? ORDER BY created_at ASC`,
 		userID, mediaType, isbn,
 	)
@@ -85,7 +88,7 @@ func (r *MediaRepository) FindDuplicates(userID, mediaType, isbn string) ([]*Med
 	var items []*Media
 	for rows.Next() {
 		m := &Media{}
-		if err := rows.Scan(&m.ID, &m.UserID, &m.MediaType, &m.Title, &m.TitleOriginal, &m.Description, &m.CoverImage, &m.Status, &m.Rating, &m.Notes, &m.YearReleased, &m.Creator, &m.Genre, &m.VolumesTotal, &m.VolumesOwned, &m.EpisodesTotal, &m.EpisodesWatched, &m.ChaptersTotal, &m.ChaptersRead, &m.ISBN, &m.ListType, &m.IsPublic, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.UserID, &m.MediaType, &m.Title, &m.TitleOriginal, &m.Description, &m.CoverImage, &m.Status, &m.Rating, &m.Notes, &m.YearReleased, &m.Creator, &m.Genre, &m.VolumesTotal, &m.VolumesOwned, &m.EpisodesTotal, &m.EpisodesWatched, &m.ChaptersTotal, &m.ChaptersRead, &m.ISBN, &m.Series, &m.SeriesPosition, &m.ListType, &m.IsPublic, &m.CreatedAt, &m.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, m)
@@ -100,9 +103,9 @@ func (r *MediaRepository) FindDuplicates(userID, mediaType, isbn string) ([]*Med
 func (r *MediaRepository) GetByID(id string) (*Media, error) {
 	m := &Media{}
 	err := r.db.QueryRow(
-		`SELECT id, user_id, media_type, title, title_original, description, cover_image, status, rating, notes, year_released, creator, genre, volumes_total, volumes_owned, episodes_total, episodes_watched, chapters_total, chapters_read, isbn, list_type, is_public, created_at, updated_at
+		`SELECT id, user_id, media_type, title, title_original, description, cover_image, status, rating, notes, year_released, creator, genre, volumes_total, volumes_owned, episodes_total, episodes_watched, chapters_total, chapters_read, isbn, series, series_position, list_type, is_public, created_at, updated_at
 		 FROM media WHERE id = ?`, id,
-	).Scan(&m.ID, &m.UserID, &m.MediaType, &m.Title, &m.TitleOriginal, &m.Description, &m.CoverImage, &m.Status, &m.Rating, &m.Notes, &m.YearReleased, &m.Creator, &m.Genre, &m.VolumesTotal, &m.VolumesOwned, &m.EpisodesTotal, &m.EpisodesWatched, &m.ChaptersTotal, &m.ChaptersRead, &m.ISBN, &m.ListType, &m.IsPublic, &m.CreatedAt, &m.UpdatedAt)
+	).Scan(&m.ID, &m.UserID, &m.MediaType, &m.Title, &m.TitleOriginal, &m.Description, &m.CoverImage, &m.Status, &m.Rating, &m.Notes, &m.YearReleased, &m.Creator, &m.Genre, &m.VolumesTotal, &m.VolumesOwned, &m.EpisodesTotal, &m.EpisodesWatched, &m.ChaptersTotal, &m.ChaptersRead, &m.ISBN, &m.Series, &m.SeriesPosition, &m.ListType, &m.IsPublic, &m.CreatedAt, &m.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +131,10 @@ func (r *MediaRepository) List(userID string, filter MediaFilter) ([]*Media, int
 		where = append(where, "m.list_type = ?")
 		args = append(args, filter.ListType)
 	}
+	if filter.Series != "" {
+		where = append(where, "m.series = ?")
+		args = append(args, filter.Series)
+	}
 	if filter.Search != "" {
 		where = append(where, "(m.title LIKE ? OR m.creator LIKE ?)")
 		s := "%" + filter.Search + "%"
@@ -152,7 +159,7 @@ func (r *MediaRepository) List(userID string, filter MediaFilter) ([]*Media, int
 	}
 
 	query := fmt.Sprintf(
-		`SELECT m.id, m.user_id, m.media_type, m.title, m.title_original, m.description, m.cover_image, m.status, m.rating, m.notes, m.year_released, m.creator, m.genre, m.volumes_total, m.volumes_owned, m.episodes_total, m.episodes_watched, m.chapters_total, m.chapters_read, m.isbn, m.list_type, m.is_public, m.created_at, m.updated_at
+		`SELECT m.id, m.user_id, m.media_type, m.title, m.title_original, m.description, m.cover_image, m.status, m.rating, m.notes, m.year_released, m.creator, m.genre, m.volumes_total, m.volumes_owned, m.episodes_total, m.episodes_watched, m.chapters_total, m.chapters_read, m.isbn, m.series, m.series_position, m.list_type, m.is_public, m.created_at, m.updated_at
 		 FROM media m WHERE %s ORDER BY m.updated_at DESC LIMIT ? OFFSET ?`, whereClause,
 	)
 	args = append(args, limit, filter.Offset)
@@ -165,7 +172,7 @@ func (r *MediaRepository) List(userID string, filter MediaFilter) ([]*Media, int
 	var items []*Media
 	for rows.Next() {
 		m := &Media{}
-		if err := rows.Scan(&m.ID, &m.UserID, &m.MediaType, &m.Title, &m.TitleOriginal, &m.Description, &m.CoverImage, &m.Status, &m.Rating, &m.Notes, &m.YearReleased, &m.Creator, &m.Genre, &m.VolumesTotal, &m.VolumesOwned, &m.EpisodesTotal, &m.EpisodesWatched, &m.ChaptersTotal, &m.ChaptersRead, &m.ISBN, &m.ListType, &m.IsPublic, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.UserID, &m.MediaType, &m.Title, &m.TitleOriginal, &m.Description, &m.CoverImage, &m.Status, &m.Rating, &m.Notes, &m.YearReleased, &m.Creator, &m.Genre, &m.VolumesTotal, &m.VolumesOwned, &m.EpisodesTotal, &m.EpisodesWatched, &m.ChaptersTotal, &m.ChaptersRead, &m.ISBN, &m.Series, &m.SeriesPosition, &m.ListType, &m.IsPublic, &m.CreatedAt, &m.UpdatedAt); err != nil {
 			rows.Close()
 			return nil, 0, err
 		}
@@ -204,7 +211,7 @@ func (r *MediaRepository) ListPublicByUser(userID string, filter MediaFilter) ([
 	}
 
 	query := fmt.Sprintf(
-		`SELECT m.id, m.user_id, m.media_type, m.title, m.title_original, m.description, m.cover_image, m.status, m.rating, m.notes, m.year_released, m.creator, m.genre, m.volumes_total, m.volumes_owned, m.episodes_total, m.episodes_watched, m.chapters_total, m.chapters_read, m.isbn, m.list_type, m.is_public, m.created_at, m.updated_at
+		`SELECT m.id, m.user_id, m.media_type, m.title, m.title_original, m.description, m.cover_image, m.status, m.rating, m.notes, m.year_released, m.creator, m.genre, m.volumes_total, m.volumes_owned, m.episodes_total, m.episodes_watched, m.chapters_total, m.chapters_read, m.isbn, m.series, m.series_position, m.list_type, m.is_public, m.created_at, m.updated_at
 		 FROM media m WHERE %s ORDER BY m.updated_at DESC LIMIT ? OFFSET ?`, whereClause,
 	)
 	args = append(args, limit, filter.Offset)
@@ -218,7 +225,7 @@ func (r *MediaRepository) ListPublicByUser(userID string, filter MediaFilter) ([
 	var items []*Media
 	for rows.Next() {
 		m := &Media{}
-		if err := rows.Scan(&m.ID, &m.UserID, &m.MediaType, &m.Title, &m.TitleOriginal, &m.Description, &m.CoverImage, &m.Status, &m.Rating, &m.Notes, &m.YearReleased, &m.Creator, &m.Genre, &m.VolumesTotal, &m.VolumesOwned, &m.EpisodesTotal, &m.EpisodesWatched, &m.ChaptersTotal, &m.ChaptersRead, &m.ISBN, &m.ListType, &m.IsPublic, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.UserID, &m.MediaType, &m.Title, &m.TitleOriginal, &m.Description, &m.CoverImage, &m.Status, &m.Rating, &m.Notes, &m.YearReleased, &m.Creator, &m.Genre, &m.VolumesTotal, &m.VolumesOwned, &m.EpisodesTotal, &m.EpisodesWatched, &m.ChaptersTotal, &m.ChaptersRead, &m.ISBN, &m.Series, &m.SeriesPosition, &m.ListType, &m.IsPublic, &m.CreatedAt, &m.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		items = append(items, m)
@@ -232,8 +239,8 @@ func (r *MediaRepository) Update(m *Media) error {
 		m.ListType = "owned"
 	}
 	_, err := r.db.Exec(
-		`UPDATE media SET title = ?, title_original = ?, description = ?, cover_image = ?, status = ?, rating = ?, notes = ?, year_released = ?, creator = ?, genre = ?, volumes_total = ?, volumes_owned = ?, episodes_total = ?, episodes_watched = ?, chapters_total = ?, chapters_read = ?, isbn = ?, list_type = ?, is_public = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-		m.Title, m.TitleOriginal, m.Description, m.CoverImage, m.Status, m.Rating, m.Notes, m.YearReleased, m.Creator, m.Genre, m.VolumesTotal, m.VolumesOwned, m.EpisodesTotal, m.EpisodesWatched, m.ChaptersTotal, m.ChaptersRead, m.ISBN, m.ListType, m.IsPublic, m.ID,
+		`UPDATE media SET title = ?, title_original = ?, description = ?, cover_image = ?, status = ?, rating = ?, notes = ?, year_released = ?, creator = ?, genre = ?, volumes_total = ?, volumes_owned = ?, episodes_total = ?, episodes_watched = ?, chapters_total = ?, chapters_read = ?, isbn = ?, series = ?, series_position = ?, list_type = ?, is_public = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+		m.Title, m.TitleOriginal, m.Description, m.CoverImage, m.Status, m.Rating, m.Notes, m.YearReleased, m.Creator, m.Genre, m.VolumesTotal, m.VolumesOwned, m.EpisodesTotal, m.EpisodesWatched, m.ChaptersTotal, m.ChaptersRead, m.ISBN, m.Series, m.SeriesPosition, m.ListType, m.IsPublic, m.ID,
 	)
 	return err
 }

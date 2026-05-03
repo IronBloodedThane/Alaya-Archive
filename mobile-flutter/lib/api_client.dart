@@ -134,6 +134,8 @@ class LookupResult {
     this.isbn13,
     this.isbn10,
     this.pageCount,
+    this.series,
+    this.seriesPosition,
   });
 
   final String provider;
@@ -147,6 +149,8 @@ class LookupResult {
   final String? isbn13;
   final String? isbn10;
   final int? pageCount;
+  final String? series;
+  final int? seriesPosition;
 
   factory LookupResult.fromJson(Map<String, dynamic> json) {
     final provider = json['provider'] as String? ?? '';
@@ -163,6 +167,8 @@ class LookupResult {
       isbn13: result['isbn_13'] as String?,
       isbn10: result['isbn_10'] as String?,
       pageCount: result['page_count'] as int?,
+      series: result['series'] as String?,
+      seriesPosition: result['series_position'] as int?,
     );
   }
 }

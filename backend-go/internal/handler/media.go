@@ -39,10 +39,12 @@ type createMediaRequest struct {
 	EpisodesTotal *int     `json:"episodes_total"`
 	EpisodesWatched *int   `json:"episodes_watched"`
 	ChaptersTotal *int     `json:"chapters_total"`
-	ChaptersRead  *int     `json:"chapters_read"`
-	ISBN          string   `json:"isbn"`
-	ListType      string   `json:"list_type"`
-	IsPublic      *bool    `json:"is_public"`
+	ChaptersRead   *int     `json:"chapters_read"`
+	ISBN           string   `json:"isbn"`
+	Series         string   `json:"series"`
+	SeriesPosition *int     `json:"series_position"`
+	ListType       string   `json:"list_type"`
+	IsPublic       *bool    `json:"is_public"`
 	Tags          []string `json:"tags"`
 	// OnDuplicate controls behavior when an item with the same
 	// (user, media_type, isbn) already exists. One of:
@@ -155,6 +157,8 @@ func (h *MediaHandler) CreateMedia(w http.ResponseWriter, r *http.Request) {
 		ChaptersTotal:   req.ChaptersTotal,
 		ChaptersRead:    req.ChaptersRead,
 		ISBN:            req.ISBN,
+		Series:          req.Series,
+		SeriesPosition:  req.SeriesPosition,
 		ListType:        listType,
 		IsPublic:        isPublic,
 	}
@@ -223,6 +227,12 @@ func applyCreateRequest(m *repository.Media, req *createMediaRequest, status, li
 	if req.ISBN != "" {
 		m.ISBN = req.ISBN
 	}
+	if req.Series != "" {
+		m.Series = req.Series
+	}
+	if req.SeriesPosition != nil {
+		m.SeriesPosition = req.SeriesPosition
+	}
 	m.ListType = listType
 	m.IsPublic = isPublic
 }
@@ -282,6 +292,7 @@ func (h *MediaHandler) ListMedia(w http.ResponseWriter, r *http.Request) {
 		Search:    r.URL.Query().Get("search"),
 		Tag:       r.URL.Query().Get("tag"),
 		ListType:  r.URL.Query().Get("list_type"),
+		Series:    r.URL.Query().Get("series"),
 		Limit:     queryInt(r, "limit", 50),
 		Offset:    queryInt(r, "offset", 0),
 	}
@@ -368,6 +379,12 @@ func (h *MediaHandler) UpdateMedia(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ISBN != "" {
 		m.ISBN = req.ISBN
+	}
+	if req.Series != "" {
+		m.Series = req.Series
+	}
+	if req.SeriesPosition != nil {
+		m.SeriesPosition = req.SeriesPosition
 	}
 	if req.ListType != "" {
 		if req.ListType != "owned" && req.ListType != "wishlist" {

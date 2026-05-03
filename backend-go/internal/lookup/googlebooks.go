@@ -174,6 +174,10 @@ func (v googleBooksVolume) toResult() *Result {
 			r.ISBN13 = id.Identifier
 		}
 	}
+	// Best-effort series detection — Google Books has no first-class
+	// series field, so we parse the title. Empty result is fine; the user
+	// can override in the form.
+	r.Series, r.SeriesPosition = ParseSeries(info.Title)
 	return r
 }
 

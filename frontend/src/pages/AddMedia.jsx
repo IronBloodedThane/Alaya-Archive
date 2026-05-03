@@ -40,6 +40,8 @@ export default function AddMedia() {
     chapters_total: '',
     chapters_read: '',
     isbn: '',
+    series: '',
+    series_position: '',
     list_type: 'owned',
     is_public: true,
     tags: '',
@@ -81,6 +83,8 @@ export default function AddMedia() {
         chapters_total: existing.chapters_total ?? '',
         chapters_read: existing.chapters_read ?? '',
         isbn: existing.isbn || '',
+        series: existing.series || '',
+        series_position: existing.series_position ?? '',
         list_type: existing.list_type || 'owned',
         is_public: existing.is_public,
         tags: existing.tags?.join(', ') || '',
@@ -124,6 +128,7 @@ export default function AddMedia() {
     episodes_watched: form.episodes_watched ? parseInt(form.episodes_watched) : null,
     chapters_total: form.chapters_total ? parseInt(form.chapters_total) : null,
     chapters_read: form.chapters_read ? parseInt(form.chapters_read) : null,
+    series_position: form.series_position ? parseInt(form.series_position) : null,
     tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
   })
 
@@ -161,6 +166,9 @@ export default function AddMedia() {
         description: result.description || f.description,
         cover_image: result.cover_image || f.cover_image,
         isbn: result.isbn_13 || result.isbn_10 || f.isbn,
+        series: result.series || f.series,
+        series_position:
+          result.series_position ? String(result.series_position) : f.series_position,
       }))
       setLookupNote({ kind: 'ok', text: `Filled from ${provider}` })
     } catch (err) {
@@ -281,6 +289,31 @@ export default function AddMedia() {
             )}
           </div>
         )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="md:col-span-2">
+            <label className={labelClass}>Series</label>
+            <input
+              type="text"
+              name="series"
+              value={form.series}
+              onChange={handleChange}
+              className={inputClass}
+              placeholder="e.g. Berserk, Dune"
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Volume #</label>
+            <input
+              type="number"
+              name="series_position"
+              value={form.series_position}
+              onChange={handleChange}
+              className={inputClass}
+              min="1"
+            />
+          </div>
+        </div>
 
         <div className="mb-4">
           <label className={labelClass}>Genre</label>

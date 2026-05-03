@@ -108,6 +108,43 @@ void main() {
       expect(item.toCreatePayload()['title'], '(untitled)');
     });
 
+    test('lookup with series populates series fields', () {
+      final item = ScannedItem(
+        isbn: '9781593070205',
+        mediaType: 'manga',
+        listType: ListType.owned,
+      );
+      item.applyLookup(LookupResult(
+        provider: 'google_books',
+        title: 'Berserk Volume 1',
+        authors: const ['Kentaro Miura'],
+        series: 'Berserk',
+        seriesPosition: 1,
+      ));
+      expect(item.series, 'Berserk');
+      expect(item.seriesPosition, '1');
+
+      final payload = item.toCreatePayload();
+      expect(payload['series'], 'Berserk');
+      expect(payload['series_position'], 1);
+    });
+
+    test('series_position omitted from payload when blank', () {
+      final item = ScannedItem(
+        isbn: '9780441172719',
+        mediaType: 'book',
+        listType: ListType.owned,
+      );
+      item.applyLookup(LookupResult(
+        provider: 'google_books',
+        title: 'Dune',
+        authors: const ['Frank Herbert'],
+      ));
+      final payload = item.toCreatePayload();
+      expect(payload.containsKey('series_position'), false);
+      expect(payload['series'], '');
+    });
+
     test('payload includes list_type for both owned and wishlist', () {
       final owned = ScannedItem(
         isbn: '9780441172719',

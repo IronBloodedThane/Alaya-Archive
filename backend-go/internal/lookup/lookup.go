@@ -27,6 +27,11 @@ type Result struct {
 	Language     string   `json:"language,omitempty"`
 	Publisher    string   `json:"publisher,omitempty"`
 	InfoURL      string   `json:"info_url,omitempty"`
+	// Series and SeriesPosition are parsed from Title — multi-volume works
+	// like manga ("Berserk Vol. 1") let the UI group volumes together.
+	// Empty when the title doesn't look like part of a series.
+	Series         string `json:"series,omitempty"`
+	SeriesPosition int    `json:"series_position,omitempty"`
 }
 
 // Provider is implemented by each external metadata source. Implementations

@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import Collection from './pages/Collection'
 import AddMedia from './pages/AddMedia'
 import MediaDetail from './pages/MediaDetail'
+import SeriesDetail from './pages/SeriesDetail'
 import Profile from './pages/Profile'
 import PublicProfile from './pages/PublicProfile'
 import Friends from './pages/Friends'
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/collection/add" element={<AddMedia />} />
         <Route path="/collection/:mediaId" element={<MediaDetail />} />
         <Route path="/collection/:mediaId/edit" element={<AddMedia />} />
+        <Route path="/series/:name" element={<SeriesDetail />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/friends" element={<Friends />} />
         <Route path="/feed" element={<Feed />} />

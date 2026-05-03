@@ -176,6 +176,20 @@ var migrations = []migration{
 		CREATE INDEX IF NOT EXISTS idx_media_user_list_type ON media(user_id, list_type);
 		`,
 	},
+	{
+		// series + series_position let us group multi-volume works
+		// (manga, episodic books) under one card in the UI. Each volume
+		// stays its own row — no schema-level parent/child. Empty series
+		// means "standalone item". Index covers the common UI query of
+		// "show me the volumes in this series" scoped to one user.
+		version: 10,
+		name:    "media_series",
+		sql: `
+		ALTER TABLE media ADD COLUMN series TEXT NOT NULL DEFAULT '';
+		ALTER TABLE media ADD COLUMN series_position INTEGER;
+		CREATE INDEX IF NOT EXISTS idx_media_user_series ON media(user_id, series);
+		`,
+	},
 }
 
 func Migrate(db *sql.DB) error {
